@@ -1,4 +1,4 @@
-# 星语哨兵 · StarWhisper Sentinel
+# 服务器监控工具 · StarWhisper Sentinel（星语哨兵）
 
 一个 Windows 桌面的服务器监控小工具：桌面悬浮窗 + 液态玻璃主面板 + 内嵌终端 + 壁纸管理。
 数据优先走**宝塔面板 API**，其次 SSH，没配置时进入**演示模式**，开箱即可看到完整效果。
@@ -31,6 +31,7 @@
 - **流畅模式**：关掉极光/噪点/折射与动画，适合远控、低配机器或录屏。
 - **应用与窗口（v1.2）**：设置页可改**应用名称**（标题栏、托盘、悬浮窗、关于同步更换）、选**启动方式**（主面板 / 只悬浮窗 / 两者）、开关**悬浮窗显示**、开关**最小化进托盘**。
 - **关闭行为可控（v1.2）**：关闭主面板可选「最小化到托盘 / 直接退出 / 每次询问」；可设置关到托盘时弹**提醒**（内容可选托盘 / 悬浮窗 / 退出，或自定义文案），另有「不再提醒」；也有「关闭并退出程序」按钮。
+- **设置全部加密（v1.3）**：所有用户输入（面板地址、API 密钥、SSH 主机/端口/账号/密码/私钥路径、壁纸路径等）整体序列化后加密写入 `settings.json` —— 优先 Windows DPAPI（safeStorage），系统不支持时退到 AES-256-GCM + 本地随机密钥；磁盘与仓库里都不存在明文，并用 `icacls` 把设置文件与密钥文件限制为当前用户可读。
 - **托盘常驻**：托盘菜单可打开主面板、显示/隐藏悬浮窗、切换悬浮窗尺寸（标准/迷你）、立即刷新、打开壁纸/设置、退出。
 
 ## 快速开始
@@ -101,8 +102,9 @@ pnpm pack
 
 ## 数据与隐私
 
-- 面板地址、密钥、SSH 密码只保存在本机 `%APPDATA%\星语哨兵\settings.json`；密钥用 Electron safeStorage（DPAPI）加密，机器绑定，不上传任何服务器。
-- 仓库里的默认配置是空的（`mode: demo`），不含任何真实凭据、域名或 IP。
+- **全部设置整体加密**：面板地址、API 密钥、SSH 主机/账号/密码/私钥路径、壁纸路径以及所有外观选项，先合并成一份 JSON，再用 Windows DPAPI（Electron `safeStorage`）加密成单个信封写入 `%APPDATA%\星语哨兵\settings.json`（`format: 3`）；系统没有 DPAPI 时自动改用 AES-256-GCM + 本机随机密钥 `store.key`，两者都用 `icacls` 限制为当前用户读。旧版本（≤1.2）的明文配置会在第一次启动时自动迁移并立即改写成密文。
+- 运行期的明文只在内存里；界面回传设置时密钥与密码字段会被抹成空串（`hasApiKey` / `hasPassword` 标记代替），不会回流到渲染层日志或磁盘。
+- 不上传任何服务器；仓库里的默认配置是空的（`mode: demo`），不含任何真实凭据、域名或 IP。
 - 壁纸在本地生成/读取，不上传。
 
 ## 目录
@@ -117,7 +119,7 @@ docs/screenshots/ 界面截图
 
 ## 发布与更新
 
-在线仓库：<https://github.com/furxingyu-star/star-sentinel>
+在线仓库：<https://github.com/furxingyu-star/server-monitor-tool>
 
 ```powershell
 # 推到 GitHub（默认 SSH，密钥 %USERPROFILE%\.ssh\star_sentinel2）
@@ -127,7 +129,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\push-to-github.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\make-bundle.ps1
 ```
 
-- `push-to-github.ps1` 默认远端 `git@github.com:furxingyu-star/star-sentinel.git`；换仓库传 `-RepoUrl`，换密钥传 `-SshKey`。
+- `push-to-github.ps1` 默认远端 `git@github.com:furxingyu-star/server-monitor-tool.git`；换仓库传 `-RepoUrl`，换密钥传 `-SshKey`。
 - `make-bundle.ps1` 产出 `_publish\star-sentinel.bundle`（完整 git 历史，可 clone）与 `_publish\star-sentinel-src.zip`（源码，遵守 .gitignore），适合完全离线的机器。
 
 ## 已知限制

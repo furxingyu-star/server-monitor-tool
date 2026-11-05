@@ -5,7 +5,7 @@
 
     powershell -NoProfile -ExecutionPolicy Bypass -File scripts\push-to-github.ps1
 
-  Default remote is git@github.com:furxingyu-star/star-sentinel.git and the
+  Default remote is git@github.com:furxingyu-star/server-monitor-tool.git and the
   default key is %USERPROFILE%\.ssh\star_sentinel2 (already registered on the
   GitHub account). Generate your own with:
 
@@ -24,7 +24,7 @@
 #>
 [CmdletBinding()]
 param(
-  [string]$RepoUrl = "git@github.com:furxingyu-star/star-sentinel.git",
+  [string]$RepoUrl = "git@github.com:furxingyu-star/server-monitor-tool.git",
   [string]$Branch = "main",
   [string]$SshKey = "$env:USERPROFILE\.ssh\star_sentinel2"
 )

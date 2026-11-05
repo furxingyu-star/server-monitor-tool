@@ -1491,6 +1491,7 @@ async function boot() {
       fillSettings(boot.settings);
       $('aboutVersion').textContent = boot.appVersion || '1.0.0';
       $('aboutElectron').textContent = boot.electron || '—';
+      if ($('aboutStorage')) $('aboutStorage').textContent = (boot.storage && boot.storage.label) || '—';
       if (boot.wallpaper && boot.wallpaper.url) {
         state.wallpaper = boot.wallpaper;
         applyBackdrop(boot.wallpaper.url);

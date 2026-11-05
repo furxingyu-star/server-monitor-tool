@@ -176,6 +176,7 @@ async function bootstrapPayload() {
     settings: s,
     appVersion: app.getVersion(),
     electron: process.versions.electron,
+    storage: store.protection(),
     platform: process.platform,
     wallpaper: { path: wpPath, url: lastWallpaper.url, thumb: wallpaper.thumbDataUrl(wpPath, 1440) },
     wallpapers: items,
