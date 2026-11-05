@@ -710,7 +710,9 @@ html[data-theme="pixel"] .accent-custom {
   border: 1px dashed var(--p-outline); color: var(--p-on-surface-muted);
 }
 
-html[data-theme="pixel"] .seg-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+/* 用 minmax(0,1fr) 而不是 minmax(120px,1fr)：窄列（如「外观模式」只有 279px）下
+   120px 的轨道下限会把三选项挤成两行，量高一致时就显得跳。0 下限让它永远单行排开。 */
+html[data-theme="pixel"] .seg-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
 html[data-theme="pixel"] .seg-row button {
   height: 44px; border-radius: 999px; border: 1px solid var(--p-outline-variant);
   background: transparent; color: var(--p-on-surface-variant); font-size: 12.5px; font-weight: 500;

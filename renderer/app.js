@@ -226,8 +226,10 @@ function rgbToHsl255(r, g, b) {
 
 /* 只挑壁纸里「有颜色」的像素，按色相做圆周平均（蓝+紫才不会平均成灰），
    彩度加权 —— 这就是 M3 会拿去做种子的那个活力色；壁纸太灰就交回强调色。 */
+let wallSeedCache = { src: null, val: null };
 function sampleWallSeed() {
   if (!wallSample.ready || !wallSample.img) return null;
+  if (wallSeedCache.src === wallSample.src) return wallSeedCache.val;
   try {
     const c = document.createElement('canvas');
     c.width = 16; c.height = 16;
@@ -245,10 +247,12 @@ function sampleWallSeed() {
       sx += Math.cos(a) * weight; sy += Math.sin(a) * weight;
       sat += hsl[1] * weight; w += weight;
     }
-    if (w <= 0) return null;
+    if (w <= 0) { wallSeedCache = { src: wallSample.src, val: null }; return null; }
     let h = Math.atan2(sy, sx) / TAU;
     if (h < 0) h += 1;
-    return [h, Math.min(.90, Math.max(.55, (sat / w) * 1.35))];
+    const val = [h, Math.min(.90, Math.max(.55, (sat / w) * 1.35))];
+    wallSeedCache = { src: wallSample.src, val };
+    return val;
   } catch (e) {
     return null;
   }
@@ -592,15 +596,20 @@ function applyBackdrop(url) {
    Liquid glass takes colour from what sits behind it: sample the wallpaper
    under every pane and expose it as --adapt, so each card is subtly tinted by
    its own backdrop instead of one flat theme colour. */
-const wallSample = { img: null, ready: false };
+const wallSample = { img: null, ready: false, grid: null };
 let tintTimer = 0;
+const TINT_GRID = 192;   // 壁纸只缩小采样一次，之后 tint 全是纯数组运算
 function loadWallSample(url) {
   if (!url || wallSample.src === url) return;
   wallSample.src = url;
   wallSample.ready = false;
   pixelAccentSeed = false; // 换了壁纸就回到「从壁纸取色」
   const img = new Image();
-  img.onload = () => { wallSample.img = img; wallSample.ready = true; applyPixelPalette(); repaintChartsIfNeeded(); scheduleAdaptiveTint(); };
+  img.onload = () => {
+    wallSample.img = img; wallSample.ready = true;
+    buildWallGrid(img);
+    applyPixelPalette(); repaintChartsIfNeeded(); scheduleAdaptiveTint();
+  };
   img.onerror = () => { wallSample.ready = false; };
   img.src = url;
 }
@@ -608,34 +617,55 @@ function scheduleAdaptiveTint() {
   if (tintTimer) return;
   tintTimer = setTimeout(() => { tintTimer = 0; tintCards(); }, 140);
 }
+function buildWallGrid(img) {
+  const nw = img.naturalWidth || 1, nh = img.naturalHeight || 1;
+  const gw = Math.max(8, Math.min(TINT_GRID, nw));
+  const gh = Math.max(8, Math.round(gw * nh / nw));
+  const c = document.createElement('canvas');
+  c.width = gw; c.height = gh;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  try {
+    ctx.drawImage(img, 0, 0, gw, gh);
+    wallSample.grid = { w: gw, h: gh, data: ctx.getImageData(0, 0, gw, gh).data };
+  } catch (e) {
+    wallSample.grid = null;
+  }
+}
 function tintCards() {
   if (!wallSample.ready || document.hidden) return;
-  const sheet = document.getElementById('adaptSheet');
-  if (!sheet) return;
+  const grid = wallSample.grid;
+  if (!grid) return;
   const W = window.innerWidth, H = window.innerHeight;
   const bw = W * 1.06, bh = H * 1.06;          // .bg is inset -3%
   const img = wallSample.img;
   const sc = Math.max(bw / img.naturalWidth, bh / img.naturalHeight);
   const dw = img.naturalWidth * sc, dh = img.naturalHeight * sc;
   const ox = -0.03 * W + (bw - dw) / 2, oy = -0.03 * H + (bh - dh) / 2;
-  const cvs = sheet;
-  const ctx = cvs.getContext('2d', { willReadFrequently: true });
-  ctx.clearRect(0, 0, 8, 8);
   const dark = !isLightTheme();
+  const gw = grid.w, gh = grid.h, px = grid.data;
   els('.glass').forEach((el) => {
     const r = el.getBoundingClientRect();
     if (r.width < 24 || r.height < 24 || r.bottom < 0 || r.top > H) return;
-    const sx = (r.left - ox) / sc, sy = (r.top - oy) / sc;
-    const sw = r.width / sc, sh = r.height / sc;
-    try { ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 8, 8); } catch (e) { return; }
-    const d = ctx.getImageData(0, 0, 8, 8).data;
-    let rr = 0, gg = 0, bb = 0;
+    // 把卡片矩形映射到已缩小的壁纸网格，最多取约 8x8 个点做平均
+    let x0 = Math.floor(((r.left - ox) / dw) * gw);
+    let x1 = Math.ceil(((r.right - ox) / dw) * gw);
+    let y0 = Math.floor(((r.top - oy) / dh) * gh);
+    let y1 = Math.ceil(((r.bottom - oy) / dh) * gh);
+    x0 = Math.max(0, Math.min(gw - 1, x0)); x1 = Math.max(x0 + 1, Math.min(gw, x1));
+    y0 = Math.max(0, Math.min(gh - 1, y0)); y1 = Math.max(y0 + 1, Math.min(gh, y1));
+    const stepX = Math.max(1, Math.ceil((x1 - x0) / 8));
+    const stepY = Math.max(1, Math.ceil((y1 - y0) / 8));
+    let rr = 0, gg = 0, bb = 0, n = 0;
     const lums = [];
-    for (let i = 0; i < d.length; i += 4) {
-      rr += d[i]; gg += d[i + 1]; bb += d[i + 2];
-      lums.push(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+    for (let y = y0; y < y1; y += stepY) {
+      const row = y * gw;
+      for (let x = x0; x < x1; x += stepX) {
+        const i = (row + x) << 2;
+        rr += px[i]; gg += px[i + 1]; bb += px[i + 2]; n++;
+        lums.push(0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]);
+      }
     }
-    const n = d.length / 4;
+    if (!n) return;
     rr /= n; gg /= n; bb /= n;
     lums.sort((a, b) => a - b);
     const lum = lums[Math.min(lums.length - 1, Math.floor(lums.length * 0.85))];
@@ -651,10 +681,6 @@ function tintCards() {
   });
 }
 (function initAdaptiveTint() {
-  const c = document.createElement('canvas');
-  c.id = 'adaptSheet'; c.width = 8; c.height = 8;
-  c.style.cssText = 'position:absolute;left:-9999px;top:0;width:8px;height:8px';
-  document.body.appendChild(c);
   window.addEventListener('resize', scheduleAdaptiveTint);
   const content = document.getElementById('content');
   if (content) content.addEventListener('scroll', scheduleAdaptiveTint, { passive: true });
