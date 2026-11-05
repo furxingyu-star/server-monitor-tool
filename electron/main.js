@@ -130,7 +130,7 @@ class DataEngine {
         if (!this.ssh.connected) await this.ssh.connect(this.settings);
         snap = await this.ssh.metrics();
         snap.name = this.settings.displayName || (this.settings.ssh && this.settings.ssh.host) || '';
-        snap.cpuHistory = [...((this.last && this.last.cpuHistory) || []), { t: Date.now(), cpu: snap.cpu.usage, mem: snap.mem.percent, net: snap.net.up + snap.net.down }].slice(-60);
+        snap.cpuHistory = [...((this.last && this.last.cpuHistory) || []), { t: Date.now(), cpu: snap.cpu.usage, mem: snap.mem.percent, disk: (snap.disk && snap.disk.percent) || 0, net: snap.net.up + snap.net.down }].slice(-60);
       } else {
         snap = this.demo.next();
         snap.name = this.settings.displayName || snap.name || '';
@@ -153,7 +153,7 @@ class DataEngine {
         net: base.net || { up: 0, down: 0, upTotal: 0, downTotal: 0 },
         io: base.io || { read: 0, write: 0 },
         containers: base.containers || [],
-        cpuHistory: [...(base.cpuHistory || []), { t: Date.now(), cpu: 0, mem: 0, net: 0 }].slice(-60)
+        cpuHistory: [...(base.cpuHistory || []), { t: Date.now(), cpu: 0, mem: 0, disk: (base.disk && base.disk.percent) || 0, net: 0 }].slice(-60)
       };
       this.last = snap;
       this.publish(snap);

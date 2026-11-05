@@ -36,6 +36,7 @@ class DemoSource {
         t: now - i * 3000,
         cpu: this.cpu,
         mem: this.memPct,
+        disk: this.diskPct,
         net: this.netUp + this.netDown
       });
     }
@@ -52,7 +53,7 @@ class DemoSource {
     this.upTotal += this.netUp * 3;
     this.downTotal += this.netDown * 3;
     const now = Date.now();
-    this.history.push({ t: now, cpu: this.cpu, mem: this.memPct, net: (this.netUp + this.netDown) });
+    this.history.push({ t: now, cpu: this.cpu, mem: this.memPct, disk: this.diskPct, net: (this.netUp + this.netDown) });
     if (this.history.length > 60) this.history.shift();
     const memTotal = 3.9 * 1024 ** 3;
     const diskTotal = 40 * 1024 ** 3;

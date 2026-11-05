@@ -340,6 +340,7 @@ function repaintChartsIfNeeded() {
     if ($('mainChart')) renderMainChart(v);
     if ($('perfChart')) renderPerformance(v);
     if ($('heroSpark')) renderHeroSpark(v);
+    renderMetricSparks(v);
   } catch (e) {}
 }
 
@@ -765,6 +766,7 @@ function render(snap) {
   renderSiteMini(v);
   renderMainChart(v);
   renderHeroSpark(v);
+  renderMetricSparks(v);
   renderPerformance(v);
   renderContainers(v);
   renderSites(v);
@@ -944,6 +946,22 @@ function renderMainChart(v) {
 function renderHeroSpark(v) {
   const vals = padSeries(v.hist.map((p) => num(p.cpu)), 24);
   return drawLineChart($('heroSpark'), vals.length ? vals : [v.cpu], paintTint(accentForChart()), { max: 100, softMin: 26, glow: 8, width: 1.6 });
+}
+
+/* 三张指标卡里的迷你曲线：数据不够时退回当前值，保证不空白 */
+function renderMetricSparks(v) {
+  const hist = Array.isArray(v.hist) ? v.hist : [];
+  const hasKey = (key) => hist.some((p) => p[key] !== undefined);
+  const series = (key, fallback) => {
+    if (!hist.length || !hasKey(key)) return padSeries([fallback], 24);
+    return padSeries(hist.map((p) => num(p[key])), 24);
+  };
+  const colors = { cpu: accentForChart(), mem: '#a98bff', disk: '#3fc79a' };
+  [['cpu', v.cpu], ['mem', v.mem], ['disk', v.disk]].forEach(([key, cur]) => {
+    const cv = $(key + 'Spark');
+    if (!cv) return;
+    drawLineChart(cv, series(key, cur), paintTint(colors[key]), { max: 100, softMin: 18, glow: 5, width: 1.3 });
+  });
 }
 
 function renderPerformance(v) {

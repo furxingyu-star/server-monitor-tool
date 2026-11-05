@@ -153,7 +153,7 @@ class BtClient {
     const downKBs = Number(n && n.down) || 0;
     const now = Date.now();
     const hist = Array.isArray(prev.cpuHistory) ? prev.cpuHistory.slice(-59) : [];
-    hist.push({ t: now, cpu: cpuUsage, mem: memTotal ? (memUsed / memTotal) * 100 : 0, net: upKBs + downKBs });
+    hist.push({ t: now, cpu: cpuUsage, mem: memTotal ? (memUsed / memTotal) * 100 : 0, disk: diskTotal ? Math.min(100, (diskUsed / diskTotal) * 100) : 0, net: upKBs + downKBs });
 
     return {
       ts: now,

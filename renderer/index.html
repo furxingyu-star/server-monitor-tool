@@ -141,6 +141,7 @@
           <div class="mc-head"><span class="mc-icon cpuIcon"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 3v2M15 3v2M9 19v2M15 19v2M3 9h2M3 15h2M19 9h2M19 15h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><span>CPU</span><em id="cpuTrend">—</em></div>
           <div class="mc-value"><b id="cpuValue">0</b><span>%</span></div>
           <div class="mc-bar"><i id="cpuBar" style="width:0%"></i></div>
+          <canvas class="mc-spark" id="cpuSpark" height="34"></canvas>
           <div class="mc-foot"><span id="cpuSub">2 核</span><span id="cpuLoad">负载 0.00</span></div>
         </article>
 
@@ -148,6 +149,7 @@
           <div class="mc-head"><span class="mc-icon memIcon"><svg viewBox="0 0 24 24"><rect x="3.5" y="7" width="17" height="10" rx="2.5"/><path d="M7 10v4M11 10v4M15 10v4M19 10v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span>内存</span><em id="memTrend">—</em></div>
           <div class="mc-value"><b id="memValue">0</b><span>%</span></div>
           <div class="mc-bar"><i id="memBar" style="width:0%"></i></div>
+          <canvas class="mc-spark" id="memSpark" height="34"></canvas>
           <div class="mc-foot"><span id="memSub">— / —</span><span id="memFree">可用 —</span></div>
         </article>
 
@@ -155,6 +157,7 @@
           <div class="mc-head"><span class="mc-icon diskIcon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6.5" rx="8" ry="3"/><path d="M4 6.5v11c0 1.7 3.6 3 8 3s8-1.3 8-3v-11M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span><span>磁盘</span><em id="diskTrend">—</em></div>
           <div class="mc-value"><b id="diskValue">0</b><span>%</span></div>
           <div class="mc-bar"><i id="diskBar" style="width:0%"></i></div>
+          <canvas class="mc-spark" id="diskSpark" height="34"></canvas>
           <div class="mc-foot"><span id="diskSub">— / —</span><span id="diskFree">剩余 —</span></div>
         </article>
       </div>
