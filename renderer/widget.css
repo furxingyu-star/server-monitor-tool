@@ -132,21 +132,27 @@ html[data-size="mini"] .status-dot { width: 5px; height: 5px; }
 @font-face { font-family: "Pixel Sans"; font-weight: 500; font-style: normal; font-display: swap;
   src: url("fonts/Roboto-Medium.ttf") format("truetype"); }
 
+/* 与主面板同一套材质规则：像素主题是干净的实色卡片，
+   不铺壁纸、不放光斑，圆角与主面板的卡片一致（24px）。 */
+html[data-theme="pixel"] {
+  --font: "Pixel Sans", "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui, sans-serif;
+}
+html[data-theme="pixel"] body { font-family: var(--font); }
 html[data-theme="pixel"] .widget {
-  background: var(--p-surface-2, #f1f4f9);
+  background: var(--p-surface-1, #16191e);
   border: 0;
   box-shadow: none;
+  border-radius: 24px;
+  clip-path: inset(0 round 24px);
 }
-html[data-theme="pixel"] .wallpaper { filter: saturate(.92) brightness(1.18); }
-html[data-theme="pixel"] .veil {
-  background:
-    radial-gradient(120% 100% at 8% 0%, color-mix(in srgb, var(--p-primary, #1a73e8) 20%, transparent), transparent 62%),
-    linear-gradient(160deg, rgba(255,255,255,.90) 0%, rgba(249,251,254,.94) 55%, rgba(242,245,250,.96) 100%); }
+html[data-theme="pixel"] .wallpaper,
+html[data-theme="pixel"] .veil { display: none; }
 html[data-theme="pixel"] .glow, html[data-theme="pixel"] .noise, html[data-theme="pixel"] .sheen { display: none; }
 html[data-theme="pixel"] .orb {
   background: conic-gradient(from 200deg, #4285f4, #7c4dff, #0f9d58, #f9ab00, #4285f4);
   box-shadow: none; }
-html[data-theme="pixel"] .orb::after { inset: 5px; background: radial-gradient(circle at 34% 28%, #fff, rgba(255,255,255,.35) 34%, rgba(11,18,32,.72) 80%); }
+html[data-theme="pixel"] .orb::after { inset: 5px; background: radial-gradient(circle at 32% 26%, #fff, rgba(255,255,255,.45) 34%, #e8eaed 80%); }
+html[data-theme="pixel"] .orb-core { opacity: .2; filter: blur(2px); }
 
 html[data-theme="pixel"] .brand-text b {
   font-family: "Pixel Sans", "Roboto", "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", sans-serif;
@@ -154,18 +160,17 @@ html[data-theme="pixel"] .brand-text b {
 html[data-theme="pixel"] .brand-text span { font-size: 9.5px; letter-spacing: .02em; color: var(--p-on-surface-variant, #44474e); }
 html[data-theme="pixel"] .icon-btn {
   width: 30px; height: 30px; border-radius: 999px;
-  background: color-mix(in srgb, var(--p-primary, #1a73e8) 12%, transparent);
-  border: 0; color: var(--p-on-primary-container, #0b57d0); backdrop-filter: none; }
+  background: transparent; border: 0;
+  color: var(--p-on-surface-variant, #44474e); backdrop-filter: none; }
 html[data-theme="pixel"] .icon-btn:hover {
-  background: color-mix(in srgb, var(--p-primary, #1a73e8) 20%, transparent);
-  color: var(--p-on-primary-container, #0b57d0); transform: none; }
+  background: rgba(0,0,0,.06); color: var(--p-on-surface, #1b1c1e); transform: none; }
 html[data-theme="pixel"] .icon-btn.off { color: var(--p-on-surface-muted, #5f6368); }
 html[data-theme="pixel"] .icon-btn.off::after { background: var(--p-on-surface-muted, #5f6368); }
 
-html[data-theme="pixel"] .ring .track { stroke: color-mix(in srgb, var(--p-on-surface, #1b1c1e) 9%, transparent); stroke-width: 7; }
+html[data-theme="pixel"] .ring .track { stroke: var(--p-surface-3, #e6ebf2); stroke-width: 7; }
 html[data-theme="pixel"] .ring .bar { stroke-width: 7; filter: none; }
-html[data-theme="pixel"] #gCpu stop:first-child { stop-color: #4285f4; }
-html[data-theme="pixel"] #gCpu stop:last-child { stop-color: #1a73e8; }
+html[data-theme="pixel"] #gCpu stop:first-child { stop-color: color-mix(in srgb, var(--p-primary, #1a73e8) 70%, #fff); }
+html[data-theme="pixel"] #gCpu stop:last-child { stop-color: var(--p-primary, #1a73e8); }
 html[data-theme="pixel"] #gMem stop:first-child { stop-color: #a78bfa; }
 html[data-theme="pixel"] #gMem stop:last-child { stop-color: #7c4dff; }
 html[data-theme="pixel"] #gDisk stop:first-child { stop-color: #34d399; }
@@ -178,8 +183,8 @@ html[data-theme="pixel"] .ring-label i { font-size: 9px; letter-spacing: .14em; 
 html[data-theme="pixel"] .ring-sub { font-size: 9px; color: var(--p-on-surface-muted, #5f6368); letter-spacing: .01em; }
 
 html[data-theme="pixel"] .w-net {
-  margin: 10px 2px 0; padding: 10px 14px; border-radius: 20px; border: 0;
-  background: color-mix(in srgb, var(--p-primary, #1a73e8) 8%, #fff);
+  margin: 10px 2px 0; padding: 10px 14px; border-radius: 16px; border: 0;
+  background: var(--p-surface-2, #f1f4f9);
   backdrop-filter: none; }
 html[data-theme="pixel"] .net-item { font-size: 9.5px; color: var(--p-on-surface-variant, #44474e); }
 html[data-theme="pixel"] .net-item b { font-size: 12px; font-weight: 500; color: var(--p-on-surface, #1b1c1e); }
@@ -189,7 +194,7 @@ html[data-theme="pixel"] .net-item.load span { font-size: 8px; letter-spacing: .
 
 html[data-theme="pixel"] .w-foot {
   height: 38px; padding: 0 18px;
-  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--p-surface-2, #f1f4f9) 92%, #fff));
+  background: transparent;
   font-size: 9.5px; color: var(--p-on-surface-muted, #5f6368); }
 html[data-theme="pixel"] .foot-mid { color: var(--p-on-surface-muted, #5f6368); }
 html[data-theme="pixel"] .clock {
@@ -201,27 +206,23 @@ html[data-theme="pixel"] .status-dot.warn { background: #e37400; }
 html[data-theme="pixel"] .widget.offline .bar { stroke: color-mix(in srgb, var(--p-on-surface, #1b1c1e) 16%, transparent) !important; }
 
 /* mini 尺寸（252x100）在 Pixel 下也是同一张浅色卡 */
+html[data-size="mini"][data-theme="pixel"] .widget { border-radius: 18px; clip-path: inset(0 round 18px); }
 html[data-size="mini"][data-theme="pixel"] .ring-label b { font-size: 16px; }
 html[data-size="mini"][data-theme="pixel"] .w-foot { height: 24px; padding: 0 14px; background: transparent; }
 html[data-size="mini"][data-theme="pixel"] .icon-btn { width: 24px; height: 24px; }
 
 /* ---------- Pixel UI 深色外观（悬浮窗） ---------- */
-html[data-theme="pixel"][data-appearance="dark"] .widget { background: var(--p-surface, #101317); }
-html[data-theme="pixel"][data-appearance="dark"] .wallpaper { filter: saturate(.9) brightness(.9); }
-html[data-theme="pixel"][data-appearance="dark"] .veil {
-  background:
-    radial-gradient(120% 100% at 8% 0%, color-mix(in srgb, var(--p-primary, #8ab4f8) 16%, transparent), transparent 62%),
-    linear-gradient(160deg, rgba(23,26,32,.94) 0%, rgba(18,21,26,.96) 55%, rgba(14,17,22,.98) 100%); }
+html[data-theme="pixel"][data-appearance="dark"] .widget { background: var(--p-surface-1, #16191e); }
 html[data-theme="pixel"][data-appearance="dark"] .w-net {
-  background: color-mix(in srgb, var(--p-primary, #8ab4f8) 14%, transparent); }
+  background: var(--p-surface-2, #1c2026); }
 html[data-theme="pixel"][data-appearance="dark"] .w-foot {
-  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--p-surface-2, #1c2026) 92%, #000)); }
+  background: transparent; }
 html[data-theme="pixel"][data-appearance="dark"] .net-item .up { color: #81c995; }
 html[data-theme="pixel"][data-appearance="dark"] .status-dot { background: #81c995; }
 html[data-theme="pixel"][data-appearance="dark"] .status-dot.off { background: #f28b82; }
 html[data-theme="pixel"][data-appearance="dark"] .status-dot.warn { background: #fdd663; }
-html[data-theme="pixel"][data-appearance="dark"] .icon-btn { color: var(--p-on-primary-container, #d3e3fd); }
-html[data-theme="pixel"][data-appearance="dark"] .icon-btn:hover { color: var(--p-on-primary-container, #d3e3fd); }
+html[data-theme="pixel"][data-appearance="dark"] .icon-btn { color: var(--p-on-surface-variant, #b9bdc7); }
+html[data-theme="pixel"][data-appearance="dark"] .icon-btn:hover { background: rgba(255,255,255,.08); color: var(--p-on-surface, #e6e8ee); }
 html[data-theme="pixel"][data-appearance="dark"] .widget.offline .bar { stroke: rgba(255,255,255,.22) !important; }
 
 /* ---------- 玻璃玻玻璃（Liquid Glass）悬浮窗 ----------

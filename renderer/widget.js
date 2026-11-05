@@ -89,30 +89,45 @@ function applyPixelTheme() {
   }
   sat = Math.max(.42, Math.min(.92, sat));
 
+  // 和主面板 applyPixelPalette() 用同一套 M3 角色公式，两个窗口的颜色才是同一个色
+  const primary = dark ? hslToHex(h, sat * .72, .78) : hslToHex(h, sat, .42);
+  const vars = dark ? {
+    '--p-primary': primary,
+    '--p-on-primary': hslToHex(h, Math.min(.6, sat * .6), .18),
+    '--p-primary-container': hslToHex(h, Math.min(.55, sat * .45), .30),
+    '--p-on-primary-container': hslToHex(h, Math.min(.55, sat * .4), .92),
+    '--p-secondary-container': hslToHex(h, Math.min(.30, sat * .22), .26),
+    '--p-on-secondary-container': hslToHex(h, Math.min(.4, sat * .3), .90),
+    '--p-surface': hslToHex(h, Math.min(.16, sat * .14), .075),
+    '--p-surface-1': hslToHex(h, Math.min(.14, sat * .12), .105),
+    '--p-surface-2': hslToHex(h, Math.min(.14, sat * .12), .142),
+    '--p-surface-3': hslToHex(h, Math.min(.14, sat * .12), .185),
+    '--p-on-surface': hslToHex(h, .10, .92),
+    '--p-on-surface-variant': hslToHex(h, .12, .78),
+    '--p-on-surface-muted': hslToHex(h, .08, .62),
+    '--p-outline': hslToHex(h, .10, .52),
+    '--p-outline-variant': hslToHex(h, .12, .26),
+    '--accent': primary
+  } : {
+    '--p-primary': primary,
+    '--p-on-primary': '#ffffff',
+    '--p-primary-container': hslToHex(h, Math.min(.75, sat * .72), .92),
+    '--p-on-primary-container': hslToHex(h, sat, .28),
+    '--p-secondary-container': hslToHex(h, Math.min(.5, sat * .28), .91),
+    '--p-on-secondary-container': hslToHex(h, Math.min(.4, sat * .3), .24),
+    '--p-surface': hslToHex(h, Math.min(.10, sat * .10), .976),
+    '--p-surface-1': '#ffffff',
+    '--p-surface-2': hslToHex(h, Math.min(.12, sat * .12), .949),
+    '--p-surface-3': hslToHex(h, Math.min(.14, sat * .14), .902),
+    '--p-on-surface': hslToHex(h, .06, .12),
+    '--p-on-surface-variant': hslToHex(h, .07, .29),
+    '--p-on-surface-muted': hslToHex(h, .05, .42),
+    '--p-outline': hslToHex(h, .10, .70),
+    '--p-outline-variant': hslToHex(h, .14, .90),
+    '--accent': primary
+  };
   const r = document.documentElement.style;
-  if (dark) {
-    // 深色：主色提亮成 M3 dark 的 tone 80，容器压到 tone 30 左右
-    const primary = hslToHex(h, sat * .72, .78);
-    r.setProperty('--p-primary', primary);
-    r.setProperty('--p-on-primary', hslToHex(h, sat, .18));
-    r.setProperty('--p-primary-container', hslToHex(h, Math.min(.5, sat * .5), .30));
-    r.setProperty('--p-on-primary-container', hslToHex(h, Math.min(.4, sat * .35), .92));
-    r.setProperty('--p-surface-2', hslToHex(h, Math.min(.16, sat * .14), .142));
-    r.setProperty('--p-on-surface', hslToHex(h, .06, .92));
-    r.setProperty('--p-on-surface-variant', hslToHex(h, .08, .78));
-    r.setProperty('--p-on-surface-muted', hslToHex(h, .06, .62));
-    r.setProperty('--accent', primary);
-  } else {
-    const primary = hslToHex(h, sat, .42);
-    r.setProperty('--p-primary', primary);
-    r.setProperty('--p-primary-container', hslToHex(h, Math.min(.75, sat * .72), .92));
-    r.setProperty('--p-on-primary-container', hslToHex(h, sat, .28));
-    r.setProperty('--p-surface-2', hslToHex(h, Math.min(.12, sat * .12), .949));
-    r.setProperty('--p-on-surface', hslToHex(h, .06, .12));
-    r.setProperty('--p-on-surface-variant', hslToHex(h, .07, .29));
-    r.setProperty('--p-on-surface-muted', hslToHex(h, .05, .42));
-    r.setProperty('--accent', primary);
-  }
+  Object.keys(vars).forEach((k) => r.setProperty(k, vars[k]));
 }
 
 function loadPixelSeed(url) {
@@ -183,7 +198,9 @@ function render(s) {
   latest = s;
   const online = !!s.online;
   $('widget').classList.toggle('offline', !online);
-  $('statusDot').className = 'status-dot' + (online ? '' : ' off');
+  // 演示模式用主面板同款的琥珀点，在线/离线才用绿/红
+  const demo = s.mode === 'demo';
+  $('statusDot').className = 'status-dot' + (online ? (demo ? ' warn' : '') : ' off');
   const id = identity(s);
   $('wHost').textContent = id.primary + (id.secondary ? ' · ' + id.secondary : '');
   const modeText = s.mode === 'bt' ? '宝塔 API' + (s.panelVersion ? ' · BT ' + s.panelVersion : '') : s.mode === 'ssh' ? 'SSH 实时' : '演示模式';
