@@ -2,10 +2,11 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; style-src 'self' 'unsafe-inline'; script-src 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; font-src 'self' file:; style-src 'self' 'unsafe-inline'; script-src 'self';">
 <title>星语哨兵 · StarWhisper Sentinel</title>
 <link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
 <link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="pixel-theme.css">
 </head>
 <body>
 <div class="shell" id="shell">
@@ -26,12 +27,6 @@
       </div>
     </div>
     <div class="tb-center">
-      <div class="conn-pill" id="connPill">
-        <span class="dot" id="tbDot"></span>
-        <span id="tbStatus">正在连接…</span>
-        <span class="sep"></span>
-        <span id="tbHost" class="host">—</span>
-      </div>
       <div class="tb-clock" id="tbClock">--:--:--</div>
     </div>
     <div class="tb-actions">
@@ -58,7 +53,7 @@
       </button>
       <button class="nav-item" data-view="containers">
         <svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-        <span>容器</span><span class="nav-badge" id="navDocker">0</span>
+        <span>容器</span>
       </button>
       <button class="nav-item" data-view="sites">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3.6 5.2 3.6 8.5s-1.2 6.2-3.6 8.5c-2.4-2.3-3.6-5.2-3.6-8.5S9.6 5.8 12 3.5z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
@@ -86,7 +81,7 @@
       <button class="ss-refresh" id="ssRefresh">立即刷新</button>
     </div>
     <div class="side-foot">
-      <span>v1.3.0</span><span>·</span><span>液态玻璃</span>
+      <span>v1.4.0</span><span>·</span><span id="footTheme">液态玻璃</span>
     </div>
   </aside>
 
@@ -103,7 +98,10 @@
             <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
             打开宝塔
           </button>
-          <button class="primary-btn" id="refreshBtn2">刷新数据</button>
+          <button class="ghost-btn" id="refreshBtn2">
+            <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            刷新数据
+          </button>
         </div>
       </div>
 
@@ -117,9 +115,14 @@
           <div class="hero-glow"></div>
           <div class="hero-top">
             <span class="eyebrow">服务器</span>
-            <span class="live-pill" id="heroLive"><span></span>LIVE</span>
+            <span class="live-pill" id="heroLive">运行中</span>
           </div>
-          <div class="hero-name" id="heroName">服务器</div>
+          <div class="hero-name-row">
+            <div class="hero-name" id="heroName">服务器</div>
+            <button class="hero-rename" id="heroRename" type="button" title="重命名" aria-label="重命名服务器">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4.2L19 9.2a2.1 2.1 0 0 0-3-3L5.2 17z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M14.4 6.6l3 3" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
+            </button>
+          </div>
           <div class="hero-ip" id="heroIp">IP —</div>
           <div class="hero-system" id="heroSystem">Debian GNU/Linux 13</div>
           <div class="hero-meta">
@@ -174,7 +177,7 @@
         </article>
 
         <article class="glass net-card">
-          <div class="card-head"><div><h2>网络与 IO</h2><p>实时吞吐</p></div><span class="live-tag">LIVE</span></div>
+          <div class="card-head"><div><h2>网络与 IO</h2><p>实时吞吐</p></div><span class="live-tag">实时</span></div>
           <div class="net-pair">
             <div class="np up"><span class="np-arrow">↑</span><div><i>上传</i><b id="netUp">0 B/s</b><small id="netUpTotal">累计 —</small></div></div>
             <div class="np down"><span class="np-arrow">↓</span><div><i>下载</i><b id="netDown">0 B/s</b><small id="netDownTotal">累计 —</small></div></div>
@@ -372,7 +375,7 @@
         </article>
 
         <article class="glass pad-card span2" id="themePanel">
-          <div class="card-head"><div><h2>主题与外观</h2><p>深色玻璃、浅色晨雾，随心情切换</p></div></div>
+          <div class="card-head"><div><h2>主题与外观</h2><p>深色玻璃、浅色晨雾、Material You，随心情切换，跟随系统明暗</p></div></div>
           <div class="theme-grid" id="themeGrid">
             <button class="theme-card" data-theme="deep" style="--t1:#0b1a2e;--t2:#17375e;--tc:#78d7ff">
               <span class="theme-preview"><span class="theme-dot"></span></span><b>深空</b><small>默认深色玻璃</small></button>
@@ -384,6 +387,8 @@
               <span class="theme-preview"><span class="theme-dot"></span></span><b>熔金</b><small>暖橙落日</small></button>
             <button class="theme-card" data-theme="graphite" style="--t1:#111419;--t2:#242a33;--tc:#cfdaea">
               <span class="theme-preview"><span class="theme-dot"></span></span><b>石墨</b><small>极简冷灰</small></button>
+            <button class="theme-card" data-theme="pixel" style="--t1:#e8f0fe;--t2:#ffffff;--tc:#1a73e8">
+              <span class="theme-preview"><span class="theme-dot"></span></span><b>像素</b><small>Pixel · Material You</small></button>
             <button class="theme-card" data-theme="dawn" style="--t1:#dfeaf7;--t2:#f6fbff;--tc:#2f8fe0">
               <span class="theme-preview"><span class="theme-dot"></span></span><b>晨雾</b><small>浅色通透</small></button>
           </div>
@@ -392,6 +397,7 @@
               <h2 class="mt">强调色</h2>
               <div class="accent-row" id="accentRow">
                 <button data-accent="#78d7ff" style="--c:#78d7ff" class="active"></button>
+                <button data-accent="#1a73e8" style="--c:#1a73e8"></button>
                 <button data-accent="#8f9dff" style="--c:#8f9dff"></button>
                 <button data-accent="#5ef0c0" style="--c:#5ef0c0"></button>
                 <button data-accent="#ff9bc2" style="--c:#ff9bc2"></button>
@@ -403,6 +409,13 @@
               </div>
             </div>
             <div>
+              <h2 class="mt">外观模式</h2>
+              <div class="seg-row" id="appearanceSeg">
+                <button data-appearance="system" class="active">跟随系统</button>
+                <button data-appearance="light">浅色</button>
+                <button data-appearance="dark">深色</button>
+              </div>
+              <div class="fx-hint" id="appearanceHint">按 Windows 深色设置自动切换；浅色/深色用于决定像素、晨雾这类浅色主题的明暗皮肤。</div>
               <h2 class="mt">外观选项</h2>
               <label class="switch-line"><input id="liquidGlass" type="checkbox" checked><span>液态玻璃折射（更通透，占用略高）</span></label>
               <label class="switch-line"><input id="lowFx" type="checkbox"><span>流畅模式（关闭动效与重模糊，最省资源）</span></label>
@@ -414,6 +427,7 @@
             <button data-glass="std" class="active"><span class="gr-demo"></span><b>均衡</b><small>默认，通透与可读兼顾</small></button>
             <button data-glass="rich"><span class="gr-demo"></span><b>冰霜</b><small>更厚更磨砂，磨砂质感最重</small></button>
           </div>
+          <div class="fx-hint" id="fxHint"></div>
         </article>
 
         <article class="glass pad-card span2" id="appPanel">
@@ -424,11 +438,15 @@
           </div>
           <div class="form-row two">
             <label>启动时<div class="seg-row" id="startupSeg"><button data-startup="dashboard">主面板</button><button data-startup="widget">只悬浮窗</button><button data-startup="both" class="active">两者</button></div></label>
-            <label>关闭主面板时<div class="seg-row" id="closeActionSeg"><button data-close="tray" class="active">托盘</button><button data-close="quit">退出</button><button data-close="ask">每次问</button></div></label>
+            <label>小窗启动<div class="seg-row" id="widgetStartSeg"><button data-wstart="auto" class="active">随软件启动</button><button data-wstart="manual">不随软件启动</button></div></label>
           </div>
-          <label class="switch-line"><input id="showWidget" type="checkbox" checked><span>显示桌面悬浮窗</span></label>
+          <label class="switch-line"><input id="showWidget" type="checkbox" checked><span>显示桌面悬浮窗（立即生效）</span></label>
           <label class="switch-line"><input id="minimizeToTray" type="checkbox" checked><span>最小化按钮收进托盘（不占任务栏）</span></label>
-          <label class="switch-line"><input id="closeNotify" type="checkbox" checked><span>关闭到托盘时弹出提醒</span></label>
+          <div class="close-block">
+            <p class="close-title">关闭主界面时：</p>
+            <label class="radio-line"><input type="radio" name="closeAction" value="tray" checked><span>最小化到系统托盘</span></label>
+            <label class="radio-line"><input type="radio" name="closeAction" value="quit"><span>退出程序</span></label>
+            <label class="switch-line"><input id="closeNotify" type="checkbox" checked><span>关闭时提示</span></label>
           <div class="form-row two">
             <label>提醒内容<select id="closeTip">
               <option value="tray">程序仍在托盘运行，双击图标可重新打开</option>
@@ -438,7 +456,8 @@
             </select></label>
             <label>自定义提醒<input id="closeTipText" type="text" maxlength="80" placeholder="留空则使用选中文案" spellcheck="false"></label>
           </div>
-          <label class="switch-line"><input id="closeTipSilent" type="checkbox"><span>不再提醒（等同于「不再询问」）</span></label>
+            <label class="switch-line"><input id="closeTipSilent" type="checkbox"><span>不再提醒（等同于「不再询问」）</span></label>
+          </div>
           <div class="form-actions">
             <button class="ghost-btn" id="previewTip">预览提醒</button>
             <button class="ghost-btn" id="quitBtn2">关闭并退出程序</button>
@@ -447,7 +466,7 @@
 
         <article class="glass pad-card">
           <h2>显示与刷新</h2>
-          <div class="form-row"><label>服务器显示名称<input id="displayName" type="text" placeholder="my-server"></label></div>
+          <div class="form-row"><label>服务器名称<input id="displayName" type="text" maxlength="24" placeholder="留空则用面板域名" spellcheck="false"></label></div>
           <div class="form-row two">
             <label>刷新间隔（秒）<input id="pollSeconds" type="number" min="1" max="30"></label>
             <label class="check-line"><input id="alwaysOnTop" type="checkbox"><span>悬浮窗始终置顶</span></label>
@@ -461,7 +480,7 @@
           <div class="about-orb"></div>
           <p class="about-name">星语哨兵 <b>StarWhisper Sentinel</b></p>
           <p class="hint">一个专注颜值与实用的服务器监控悬浮窗。数据可来自宝塔 API、SSH 或内置演示。液态玻璃由 CSS 多层折射与模糊合成。</p>
-          <div class="kv"><span>版本</span><b id="aboutVersion">1.3.0</b></div>
+          <div class="kv"><span>版本</span><b id="aboutVersion">1.4.0</b></div>
           <div class="kv"><span>Electron</span><b id="aboutElectron">—</b></div>
           <div class="kv"><span>设置加密</span><b id="aboutStorage">—</b></div>
           <div class="kv"><span>宝塔文档</span><b><a href="#" id="btDocs">docs.bt.cn/api</a></b></div>

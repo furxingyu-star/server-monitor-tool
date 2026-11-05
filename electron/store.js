@@ -20,6 +20,7 @@ const DEFAULTS = {
   ui: {
     accent: '#78d7ff',
     theme: 'deep',
+    appearance: 'system',
     liquid: true,
     lowFx: false,
     showIp: true,
@@ -31,6 +32,7 @@ const DEFAULTS = {
     appName: '星语哨兵',
     startup: 'both',
     showWidget: true,
+    widgetAutostart: true,
     widgetSize: 'normal',
     minimizeToTray: true,
     closeAction: 'tray',

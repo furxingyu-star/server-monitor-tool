@@ -76,10 +76,9 @@ html, body { width: 100%; height: 100%; margin: 0; background: transparent; over
   padding: 0 16px; font-size: 9px; color: rgba(205,225,250,.5); letter-spacing: .03em;
   background: linear-gradient(180deg, transparent, rgba(4,8,16,.42)); }
 .foot-left { display: flex; align-items: center; gap: 6px; }
-.status-dot { width: 6px; height: 6px; border-radius: 50%; background: #63f5b3; box-shadow: 0 0 0 0 rgba(99,245,179,.5); animation: pulse 2.2s infinite; }
-.status-dot.off { background: #ff7b8a; animation: none; box-shadow: 0 0 8px rgba(255,123,138,.6); }
-.status-dot.warn { background: #ffd166; animation: none; box-shadow: 0 0 8px rgba(255,209,102,.6); }
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(99,245,179,.45); } 70% { box-shadow: 0 0 0 6px rgba(99,245,179,0); } 100% { box-shadow: 0 0 0 0 rgba(99,245,179,0); } }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; background: #63f5b3; }
+.status-dot.off { background: #ff7b8a; }
+.status-dot.warn { background: #ffd166; }
 .foot-mid { color: rgba(205,225,250,.42); }
 .clock { font-variant-numeric: tabular-nums; color: rgba(230,242,255,.72); font-size: 10px; letter-spacing: .08em; }
 .widget.offline .bar { stroke: rgba(255,255,255,.18) !important; filter: none !important; }
@@ -91,7 +90,8 @@ html[data-theme="violet"] { --accent: #b18cff; }
 html[data-theme="ocean"] { --accent: #4fe3c1; }
 html[data-theme="ember"] { --accent: #ffb86b; }
 html[data-theme="graphite"] { --accent: #cfdaea; }
-html[data-theme="dawn"] { --accent: #2f8fe0; }
+html[data-theme="dawn"][data-appearance="light"] { --accent: #2f8fe0; }
+html[data-theme="pixel"] { --accent: var(--p-primary, #1a73e8); }
 
 /* ---------- liquid glass ---------- */
 .lg-defs { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
@@ -147,3 +147,103 @@ html[data-size="mini"] .w-foot { height: 22px; padding: 0 12px; font-size: 8px;
 html[data-size="mini"] .foot-mid { display: none; }
 html[data-size="mini"] .clock { font-size: 8.5px; }
 html[data-size="mini"] .status-dot { width: 5px; height: 5px; }
+/* ---------- Pixel UI（Material You）悬浮窗 ----------
+   和主面板同一套思路：胶囊化、圆角放大、Google 四色圆环，颜色由 widget.js
+   从壁纸里取主色写进 --p-*（没有壁纸时用强调色）。 */
+@font-face { font-family: "Pixel Sans"; font-weight: 400; font-style: normal; font-display: swap;
+  src: url("fonts/Roboto-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Pixel Sans"; font-weight: 500; font-style: normal; font-display: swap;
+  src: url("fonts/Roboto-Medium.ttf") format("truetype"); }
+
+html[data-theme="pixel"] .widget {
+  background: var(--p-surface-2, #f1f4f9);
+  border: 0;
+  box-shadow: none;
+}
+html[data-theme="pixel"] .wallpaper { filter: saturate(.92) brightness(1.18); }
+html[data-theme="pixel"] .veil {
+  background:
+    radial-gradient(120% 100% at 8% 0%, color-mix(in srgb, var(--p-primary, #1a73e8) 20%, transparent), transparent 62%),
+    linear-gradient(160deg, rgba(255,255,255,.90) 0%, rgba(249,251,254,.94) 55%, rgba(242,245,250,.96) 100%); }
+html[data-theme="pixel"] .glow, html[data-theme="pixel"] .noise, html[data-theme="pixel"] .sheen { display: none; }
+html[data-theme="pixel"] .orb {
+  background: conic-gradient(from 200deg, #4285f4, #7c4dff, #0f9d58, #f9ab00, #4285f4);
+  box-shadow: none; }
+html[data-theme="pixel"] .orb::after { inset: 5px; background: radial-gradient(circle at 34% 28%, #fff, rgba(255,255,255,.35) 34%, rgba(11,18,32,.72) 80%); }
+
+html[data-theme="pixel"] .brand-text b {
+  font-family: "Pixel Sans", "Roboto", "Segoe UI Variable Display", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  font-size: 14px; font-weight: 500; letter-spacing: .01em; color: var(--p-on-surface, #1b1c1e); }
+html[data-theme="pixel"] .brand-text span { font-size: 9.5px; letter-spacing: .02em; color: var(--p-on-surface-variant, #44474e); }
+html[data-theme="pixel"] .icon-btn {
+  width: 30px; height: 30px; border-radius: 999px;
+  background: color-mix(in srgb, var(--p-primary, #1a73e8) 12%, transparent);
+  border: 0; color: var(--p-on-primary-container, #0b57d0); backdrop-filter: none; }
+html[data-theme="pixel"] .icon-btn:hover {
+  background: color-mix(in srgb, var(--p-primary, #1a73e8) 20%, transparent);
+  color: var(--p-on-primary-container, #0b57d0); transform: none; }
+html[data-theme="pixel"] .icon-btn.off { color: var(--p-on-surface-muted, #5f6368); }
+html[data-theme="pixel"] .icon-btn.off::after { background: var(--p-on-surface-muted, #5f6368); }
+
+html[data-theme="pixel"] .ring .track { stroke: color-mix(in srgb, var(--p-on-surface, #1b1c1e) 9%, transparent); stroke-width: 7; }
+html[data-theme="pixel"] .ring .bar { stroke-width: 7; filter: none; }
+html[data-theme="pixel"] #gCpu stop:first-child { stop-color: #4285f4; }
+html[data-theme="pixel"] #gCpu stop:last-child { stop-color: #1a73e8; }
+html[data-theme="pixel"] #gMem stop:first-child { stop-color: #a78bfa; }
+html[data-theme="pixel"] #gMem stop:last-child { stop-color: #7c4dff; }
+html[data-theme="pixel"] #gDisk stop:first-child { stop-color: #34d399; }
+html[data-theme="pixel"] #gDisk stop:last-child { stop-color: #0f9d58; }
+html[data-theme="pixel"] .ring-label b {
+  font-family: "Pixel Sans", "Roboto", "Segoe UI Variable Display", "Microsoft YaHei UI", sans-serif;
+  font-size: 22px; font-weight: 500; letter-spacing: -.01em; color: var(--p-on-surface, #1b1c1e); text-shadow: none; }
+html[data-theme="pixel"] .ring-label b span { font-size: 10px; font-weight: 400; opacity: .5; }
+html[data-theme="pixel"] .ring-label i { font-size: 9px; letter-spacing: .14em; color: var(--p-on-surface-variant, #44474e); }
+html[data-theme="pixel"] .ring-sub { font-size: 9px; color: var(--p-on-surface-muted, #5f6368); letter-spacing: .01em; }
+
+html[data-theme="pixel"] .w-net {
+  margin: 10px 2px 0; padding: 10px 14px; border-radius: 20px; border: 0;
+  background: color-mix(in srgb, var(--p-primary, #1a73e8) 8%, #fff);
+  backdrop-filter: none; }
+html[data-theme="pixel"] .net-item { font-size: 9.5px; color: var(--p-on-surface-variant, #44474e); }
+html[data-theme="pixel"] .net-item b { font-size: 12px; font-weight: 500; color: var(--p-on-surface, #1b1c1e); }
+html[data-theme="pixel"] .net-item .up { color: #0f9d58; }
+html[data-theme="pixel"] .net-item .down { color: var(--p-primary, #1a73e8); }
+html[data-theme="pixel"] .net-item.load span { font-size: 8px; letter-spacing: .14em; }
+
+html[data-theme="pixel"] .w-foot {
+  height: 38px; padding: 0 18px;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--p-surface-2, #f1f4f9) 92%, #fff));
+  font-size: 9.5px; color: var(--p-on-surface-muted, #5f6368); }
+html[data-theme="pixel"] .foot-mid { color: var(--p-on-surface-muted, #5f6368); }
+html[data-theme="pixel"] .clock {
+  font-family: "Pixel Sans", "Roboto", "Segoe UI Variable Display", sans-serif;
+  font-size: 11px; font-weight: 500; letter-spacing: .02em; color: var(--p-on-surface-variant, #44474e); }
+html[data-theme="pixel"] .status-dot { background: #0f9d58; animation: none; box-shadow: none; }
+html[data-theme="pixel"] .status-dot.off { background: #ba1a1a; }
+html[data-theme="pixel"] .status-dot.warn { background: #e37400; }
+html[data-theme="pixel"] .widget.offline .bar { stroke: color-mix(in srgb, var(--p-on-surface, #1b1c1e) 16%, transparent) !important; }
+
+/* mini 尺寸（252x100）在 Pixel 下也是同一张浅色卡 */
+html[data-size="mini"][data-theme="pixel"] .ring-label b { font-size: 16px; }
+html[data-size="mini"][data-theme="pixel"] .w-foot { height: 24px; padding: 0 14px; background: transparent; }
+html[data-size="mini"][data-theme="pixel"] .icon-btn { width: 24px; height: 24px; }
+
+/* ---------- Pixel UI 深色外观（悬浮窗） ---------- */
+html[data-theme="dawn"][data-appearance="dark"] { --accent: #6aa9f0; }
+html[data-theme="pixel"][data-appearance="dark"] .widget { background: var(--p-surface, #101317); }
+html[data-theme="pixel"][data-appearance="dark"] .wallpaper { filter: saturate(.9) brightness(.9); }
+html[data-theme="pixel"][data-appearance="dark"] .veil {
+  background:
+    radial-gradient(120% 100% at 8% 0%, color-mix(in srgb, var(--p-primary, #8ab4f8) 16%, transparent), transparent 62%),
+    linear-gradient(160deg, rgba(23,26,32,.94) 0%, rgba(18,21,26,.96) 55%, rgba(14,17,22,.98) 100%); }
+html[data-theme="pixel"][data-appearance="dark"] .w-net {
+  background: color-mix(in srgb, var(--p-primary, #8ab4f8) 14%, transparent); }
+html[data-theme="pixel"][data-appearance="dark"] .w-foot {
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--p-surface-2, #1c2026) 92%, #000)); }
+html[data-theme="pixel"][data-appearance="dark"] .net-item .up { color: #81c995; }
+html[data-theme="pixel"][data-appearance="dark"] .status-dot { background: #81c995; }
+html[data-theme="pixel"][data-appearance="dark"] .status-dot.off { background: #f28b82; }
+html[data-theme="pixel"][data-appearance="dark"] .status-dot.warn { background: #fdd663; }
+html[data-theme="pixel"][data-appearance="dark"] .icon-btn { color: var(--p-on-primary-container, #d3e3fd); }
+html[data-theme="pixel"][data-appearance="dark"] .icon-btn:hover { color: var(--p-on-primary-container, #d3e3fd); }
+html[data-theme="pixel"][data-appearance="dark"] .widget.offline .bar { stroke: rgba(255,255,255,.22) !important; }

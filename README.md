@@ -7,6 +7,7 @@
 ![悬浮窗](docs/screenshots/widget.png)
 ![迷你悬浮窗](docs/screenshots/widget-mini.png)
 ![设置与加密](docs/screenshots/settings.png)
+![像素主题（Material You）](docs/screenshots/pixel.png)
 
 > 作者：DeepSeek Harness Agent（AI 编程助手，DeepSeek Harness）
 > 许可：MIT（见 [LICENSE](LICENSE)）
@@ -19,7 +20,7 @@
 - **SSH 备用通道**：内置 ssh2，指标采集 + xterm.js 交互终端；密码或私钥登录。
 - **服务器终端**：主面板内嵌完整终端；也可一键在浏览器打开宝塔「终端」页。
 - **壁纸**：读取当前壁纸、扫描本机图库、6 张内置 2K 渐变/液态预设，支持填充/适应/拉伸/平铺/居中，应用到桌面并同步面板背景。
-- **主题与配色**：6 套主题（深空 / 紫霭 / 深海 / 熔金 / 石墨 / 晨光浅色）+ 8 个强调色 + 自定义取色，一键切换，主面板与悬浮窗同步。
+- **主题与配色**：7 套主题（深空 / 紫霭 / 深海 / 熔金 / 石墨 / 像素 Pixel Material You / 晨光浅色）+ 9 个强调色 + 自定义取色，一键切换，主面板与悬浮窗同步；切换主题时会自动带上该主题的默认强调色（自己挑过颜色则保持不变）。
 - **液态玻璃（Apple 风）**：Chromium 的 `backdrop-filter: url(#svgFilter)` 直接折射真实背景 —
   - 逐像素圆角 SDF 位移贴图，按卡片**宽高比自动选桶**（同一块玻璃在任何卡片上边缘弧带宽度一致）；
   - 位移峰值贴在边缘、内部几乎不动 —— 厚玻璃板的斜面压缩感，不是简单放大镜；
@@ -74,8 +75,15 @@ pnpm pack
 
 设置页「主题与外观」：
 
-- 6 张主题卡：深空（默认）、紫霭、深海、熔金、石墨、晨光（浅色）。选择后立即生效并记住。
-- 底部 8 个强调色圆点 + 自定义取色器：控制圆环、曲线、按钮光色。
+- 7 张主题卡：深空（默认）、紫霭、深海、熔金、石墨、像素（Pixel / Material You）、晨光（浅色）。选择后立即生效并记住。
+- **外观模式（v1.4）**：跟随系统 / 浅色 / 深色三档开关，只作用于「像素」和「晨雾」这两套有明暗皮肤的浅色主题；深空/紫霭/深海/熔金/石墨本来就是深色，不受影响。选「跟随系统」时随 Windows 的深色设置实时切换（不重启）。悬浮窗、图表曲线、M3 色调一起跟着换。
+- **像素 / Pixel（Material You）**：独立主题皮肤（`renderer/pixel-theme.css`，不与其他主题共用规则）。
+  - **动态取色**：从当前桌面壁纸采样主色，按 Material You 规则派生出 primary / primary-container / surface 一到三档 / on-surface / outline 整套色调；没换壁纸时也可用底部强调色当种子（把强调色换成自定义颜色即可）。
+  - **M3 外观**：实色表面卡片 28px 大圆角 + 两层 Material 阴影（无折射玻璃、无壁纸透出）、胶囊按钮与分段控件、M3 复选框与开关、填充式输入框（聚焦蓝色描边 + 4px 光环）、深色 Snackbar、Roboto 字体（本地 `renderer/fonts/`）。
+  - **取色规则**：进入像素主题时默认从壁纸取色；在像素主题里点强调色圆点或自定义取色 = 用该颜色当种子；之后换壁纸会自动回到「从壁纸取色」。圆环、进度条、图表曲线都跟着主色走。
+  - **深色只给刷新**：概览页「刷新数据」用深色（主色压暗）胶囊底 + 白字，是全页唯一的深色块；「打开宝塔」等其余操作一律 tonal / 文字按钮，不抢焦点。
+  - **悬浮窗**：同步换成 Material You 卡片（Google 四色 logo、蓝 / 紫 / 绿三色圆环、tonal 圆角图标按钮与网络条），壁纸只留一层淡淡色调。
+- 底部 9 个强调色圆点 + 自定义取色器：控制圆环、曲线、按钮光色。
 - **液态玻璃** 开关：关闭后使用普通磨砂玻璃，CPU 占用略降。
 - **玻璃质感** 三档（清透 / 均衡 / 冰霜）：只改自身背景模糊与霜层浓度（清透 1px、均衡 2px、冰霜 5px），折射强度同步放大；档位随主题记忆并同步到悬浮窗。
 - **折射实现**：位移贴图 6 档宽高比 × 3 档强度，逐像素写 R=dx、G=dy、B=128；SVG 里 `feImage` → `feDisplacementMap`（色散版做 3 遍再 `feColorMatrix` 拆通道 + `feBlend screen` 合并），由 CSS `backdrop-filter: blur() saturate() url(#lg-lens-*)` 作用在真实背景上；卡片尺寸变化时由 ResizeObserver 重新选桶。
@@ -94,12 +102,13 @@ pnpm pack
 - **提醒**：关到托盘时是否弹提醒、提醒内容（托盘 / 悬浮窗 / 退出 / 自定义文案）、「不再提醒」、以及「预览提醒」按钮。
 - 悬浮窗四角做了真透明圆角裁剪（去掉了会露出方角的窗口阴影），白底壁纸下也不会露方形边。
 
-### 5. 显示内容（IP / 域名）
+
 
 设置页「显示与刷新」：
 
 - **显示服务器 IP**：控制标题栏、概览 hero 的 IP 徽标、悬浮窗副标题是否出现服务器 IP（取自 SSH 主机，或宝塔面板地址的域名解析目标）。
-- **显示域名**：控制是否显示「服务器显示名称」（默认 my-server）。关闭后主标识改用 IP；两个都关则显示「服务器」。
+- **显示域名**：控制是否显示服务器名称（留空时自动用宝塔面板域名 / SSH 主机名）。关闭后主标识改用 IP；两个都关则显示「服务器」。
+- **服务器改名**：概览主机卡上名字右侧的铅笔（或双击名字）就地改名，回车保存；同名字段也在「显示与刷新」里。改名后主面板与悬浮窗同步，清空则恢复自动命名。
 - 两个开关即时生效，同步到悬浮窗，并写入本地设置，下次启动沿用。
 
 ### 6. 壁纸
@@ -117,7 +126,7 @@ pnpm pack
 
 ```
 electron/   主进程：main.js（窗口/托盘/IPC）、btapi.js、ssh.js、wallpaper.js、store.js、demo.js、preload.js
-renderer/   index.html / app.css / app.js / glass.js（液态玻璃位移贴图） / widget.html / widget.js / widget.css
+renderer/   index.html / app.css / app.js / glass.js（液态玻璃位移贴图） / pixel-theme.css（像素主题皮肤） / fonts/（Roboto） / widget.html / widget.js / widget.css
 assets/     图标
 scripts/    make-icon.py、pack.mjs、make-bundle.ps1（离线发版）、push-to-github.ps1
 docs/screenshots/ 界面截图

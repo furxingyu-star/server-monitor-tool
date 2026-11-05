@@ -16,13 +16,16 @@ const state = {
   accent: '#78d7ff',
   theme: 'deep',
   liquid: true,
+  liquidMemory: true,
   lowFx: false,
+  appearance: 'system', // light | dark | system（只影响浅色主题的明暗皮肤）
   showIp: true,
   showDomain: true,
   glass: 'std',
   appName: '星语哨兵',
   startup: 'both',
   showWidget: true,
+  widgetAutostart: true,
   widgetSize: 'normal',
   minimizeToTray: true,
   closeAction: 'tray',
@@ -51,7 +54,7 @@ function identity() {
   const s = state.settings || {};
   const showIp = state.showIp !== false;
   const showDomain = state.showDomain !== false;
-  const domain = String(s.displayName || '').trim();
+  const domain = String(s.displayName === 'my-server' ? '' : (s.displayName || '')).trim();
   const ip = ((s.ssh && s.ssh.host) || hostFromUrl(s.bt && s.bt.baseUrl) || '').trim();
   const primary = showDomain && domain ? domain : (showIp && ip ? ip : '服务器');
   const secondary = showDomain && showIp && domain && ip ? ip : '';
@@ -118,7 +121,10 @@ function toast(msg, kind = '') {
 }
 
 /* ---------- accent / backdrop ---------- */
-function isLightTheme() { return document.documentElement.getAttribute('data-theme') === 'dawn'; }
+const LIGHT_THEMES = ['dawn', 'pixel'];
+function isLightTheme() {
+  return LIGHT_THEMES.indexOf(document.documentElement.getAttribute('data-theme')) >= 0;
+}
 
 function hexToHsl(hex) {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '');
@@ -155,27 +161,222 @@ function applyAccent(color) {
   state.accent = color;
   document.documentElement.style.setProperty('--accent', paintTint(color));
   els('#accentRow button').forEach((b) => b.classList.toggle('active', b.dataset.accent === color));
+  applyPixelPalette();
+  repaintChartsIfNeeded();
 }
 
-const THEMES = ['deep', 'violet', 'ocean', 'ember', 'graphite', 'dawn'];
+const THEMES = ['deep', 'violet', 'ocean', 'ember', 'graphite', 'pixel', 'dawn'];
 
-function applyTheme(id) {
-  state.theme = THEMES.indexOf(id) >= 0 ? id : 'deep';
+/* 每套主题的默认强调色：切主题时只有「当前色还是某个主题的默认色」（= 用户没自己挑过）
+   才顺带换调色板，自定义颜色永远保留。 */
+const THEME_ACCENTS = {
+  deep: '#78d7ff', violet: '#b18cff', ocean: '#4fe3c1', ember: '#ffb86b',
+  graphite: '#cfdaea', pixel: '#1a73e8', dawn: '#2f8fe0'
+};
+
+const THEME_LABELS = {
+  deep: '深空 · 液态玻璃', violet: '紫霭 · 液态玻璃', ocean: '深海 · 液态玻璃',
+  ember: '熔金 · 液态玻璃', graphite: '石墨 · 液态玻璃', pixel: '像素 · Material You', dawn: '晨雾 · 浅色'
+};
+
+function applyTheme(id, syncPalette) {
+  const next = THEMES.indexOf(id) >= 0 ? id : 'deep';
+  const prev = state.theme;
+  state.theme = next;
+  const stock = Object.keys(THEME_ACCENTS).map((k) => THEME_ACCENTS[k]);
+  if (syncPalette && next !== prev && THEME_ACCENTS[next] &&
+      (!state.accent || stock.indexOf(state.accent) >= 0)) {
+    state.accent = THEME_ACCENTS[next];
+    els('#accentRow button').forEach((b) => b.classList.toggle('active', b.dataset.accent === state.accent));
+  }
+  if (next !== 'pixel') pixelAccentSeed = false;
   document.documentElement.setAttribute('data-theme', state.theme);
   document.documentElement.style.setProperty('--accent', paintTint(state.accent));
   els('#themeGrid .theme-card').forEach((b) => b.classList.toggle('active', b.dataset.theme === state.theme));
+  const ft = $('footTheme');
+  if (ft) ft.textContent = THEME_LABELS[state.theme] || '液态玻璃';
+  applyPixelPalette();
+  repaintChartsIfNeeded();
+  syncFxControls();
+}
+
+
+/* ---------- Pixel UI：Material You 动态取色 ----------
+   从当前壁纸里取一个主色（没有壁纸 / 用户自选了强调色时用强调色），
+   生成一组 M3 浅色角色写到 <html> 上，pixel-theme.css 里所有颜色都读这些变量。
+   同一组种子只算一次，避免每次刷新都重新采样。 */
+const pixelPalette = { key: '' };
+let pixelPrimary = '';      // 当前 M3 主色（图表 / canvas 用）
+let pixelAccentSeed = false; // 用户在像素主题里手动挑过颜色 */
+
+
+function rgbToHsl255(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+  if (max === min) return [0, 0, l];
+  const d = max - min;
+  const sat = l > .5 ? d / (2 - max - min) : d / (max + min);
+  const hh = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [hh / 6, sat, l];
+}
+
+/* 只挑壁纸里「有颜色」的像素，按色相做圆周平均（蓝+紫才不会平均成灰），
+   彩度加权 —— 这就是 M3 会拿去做种子的那个活力色；壁纸太灰就交回强调色。 */
+function sampleWallSeed() {
+  if (!wallSample.ready || !wallSample.img) return null;
+  try {
+    const c = document.createElement('canvas');
+    c.width = 16; c.height = 16;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(wallSample.img, 0, 0, 16, 16);
+    const d = ctx.getImageData(0, 0, 16, 16).data;
+    const TAU = Math.PI * 2;
+    let sx = 0, sy = 0, sat = 0, w = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < 8) continue;
+      const hsl = rgbToHsl255(d[i], d[i + 1], d[i + 2]);
+      if (hsl[1] < .18 || hsl[2] < .10 || hsl[2] > .94) continue;
+      const weight = hsl[1] * hsl[1] * (.4 + Math.min(.8, hsl[2]));
+      const a = hsl[0] * TAU;
+      sx += Math.cos(a) * weight; sy += Math.sin(a) * weight;
+      sat += hsl[1] * weight; w += weight;
+    }
+    if (w <= 0) return null;
+    let h = Math.atan2(sy, sx) / TAU;
+    if (h < 0) h += 1;
+    return [h, Math.min(.90, Math.max(.55, (sat / w) * 1.35))];
+  } catch (e) {
+    return null;
+  }
+}
+
+function applyPixelPalette() {
+  if (state.theme !== 'pixel') { pixelPalette.key = ''; pixelPrimary = ''; return; }
+  const customAccent = pixelAccentSeed && !!state.accent;
+  const wall = customAccent ? null : sampleWallSeed();
+  const dark = document.documentElement.getAttribute('data-appearance') === 'dark';
+  const key = (wall ? 'wall:' + (wallSample.src || '') : 'accent:' + (state.accent || '')) + (dark ? '|dark' : '|light');
+  if (key === pixelPalette.key) return;
+  pixelPalette.key = key;
+
+  let h = .60, s = .78;
+  if (wall) {
+    h = wall[0]; s = wall[1];
+  } else if (state.accent) {
+    const hsl = hexToHsl(state.accent);
+    h = hsl[0]; s = Math.max(.62, Math.min(.95, hsl[1] || .78));
+  }
+  s = Math.max(.42, Math.min(.92, s));
+
+  // 浅色用 M3 的 tone 40 主色 + 白底；深色换成 tone 80 主色 + 低亮度表面
+  const primary = dark ? hslToHex(h, s * .72, .78) : hslToHex(h, s, .42);
+  const vars = dark ? {
+    '--p-primary': primary,
+    '--p-on-primary': hslToHex(h, Math.min(.6, s * .6), .18),
+    '--p-primary-container': hslToHex(h, Math.min(.55, s * .45), .30),
+    '--p-on-primary-container': hslToHex(h, Math.min(.55, s * .4), .92),
+    '--p-secondary-container': hslToHex(h, Math.min(.30, s * .22), .26),
+    '--p-on-secondary-container': hslToHex(h, Math.min(.4, s * .3), .90),
+    '--p-surface': hslToHex(h, Math.min(.16, s * .14), .075),
+    '--p-surface-1': hslToHex(h, Math.min(.14, s * .12), .105),
+    '--p-surface-2': hslToHex(h, Math.min(.14, s * .12), .142),
+    '--p-surface-3': hslToHex(h, Math.min(.14, s * .12), .185),
+    '--p-on-surface': hslToHex(h, .10, .92),
+    '--p-on-surface-variant': hslToHex(h, .12, .78),
+    '--p-on-surface-muted': hslToHex(h, .08, .62),
+    '--p-outline': hslToHex(h, .10, .52),
+    '--p-outline-variant': hslToHex(h, .12, .26),
+    '--accent': primary
+  } : {
+    '--p-primary': primary,
+    '--p-on-primary': '#ffffff',
+    '--p-primary-container': hslToHex(h, Math.min(.75, s * .72), .92),
+    '--p-on-primary-container': hslToHex(h, s, .28),
+    '--p-secondary-container': hslToHex(h, Math.min(.5, s * .28), .91),
+    '--p-on-secondary-container': hslToHex(h, Math.min(.4, s * .3), .24),
+    '--p-surface': hslToHex(h, Math.min(.10, s * .10), .976),
+    '--p-surface-1': '#ffffff',
+    '--p-surface-2': hslToHex(h, Math.min(.12, s * .12), .949),
+    '--p-surface-3': hslToHex(h, Math.min(.14, s * .14), .902),
+    '--p-on-surface': hslToHex(h, .06, .12),
+    '--p-on-surface-variant': hslToHex(h, .07, .29),
+    '--p-on-surface-muted': hslToHex(h, .05, .42),
+    '--p-outline': hslToHex(h, .10, .70),
+    '--p-outline-variant': hslToHex(h, .14, .90),
+    // 图表 / 进度条 / 强调色统一跟着主色走
+    '--accent': primary
+  };
+  const root = document.documentElement;
+  Object.keys(vars).forEach((k) => root.style.setProperty(k, vars[k]));
+  pixelPrimary = primary;
+  repaintChartsIfNeeded();
+}
+
+/* 图表是 canvas 画的，读不了 CSS 变量，得在调色板变化后重画一次 */
+function accentForChart() {
+  return state.theme === 'pixel' && pixelPrimary ? pixelPrimary : state.accent;
+}
+
+function repaintChartsIfNeeded() {
+  if (!state.snap) return;
+  try {
+    const v = snapshotView(state.snap);
+    if ($('mainChart')) renderMainChart(v);
+    if ($('perfChart')) renderPerformance(v);
+    if ($('heroSpark')) renderHeroSpark(v);
+  } catch (e) {}
 }
 
 function applyFx(ui) {
   ui = ui || {};
-  state.liquid = ui.liquid !== false;
   state.lowFx = !!ui.lowFx;
+  // 流畅模式会关掉重模糊，和液态玻璃折射互斥，开一个就关另一个
+  state.liquid = ui.liquid !== false && !state.lowFx;
+  if (state.liquid) state.liquidMemory = true;
   document.documentElement.setAttribute('data-liquid', state.liquid ? '1' : '0');
   document.documentElement.setAttribute('data-fx', state.lowFx ? 'low' : '');
+  syncFxControls();
+}
+
+/* ---------- 外观模式：跟随系统 / 浅色 / 深色 ----------
+   只决定浅色主题用哪套皮肤：像素主题有 Material You 的亮/暗两套，
+   晨雾的浅色覆盖层只在亮色下生效。深色主题本身已经是深色，不受影响。 */
+const SYSTEM_DARK = window.matchMedia('(prefers-color-scheme: dark)');
+function resolvedDark() {
+  return state.appearance === 'dark' || (state.appearance === 'system' && SYSTEM_DARK.matches);
+}
+function applyAppearance(mode) {
+  state.appearance = ['light', 'dark', 'system'].indexOf(mode) >= 0 ? mode : 'system';
+  const dark = resolvedDark();
+  document.documentElement.setAttribute('data-appearance', dark ? 'dark' : 'light');
+  els('#appearanceSeg button').forEach((b) => b.classList.toggle('active', b.dataset.appearance === state.appearance));
+  applyPixelPalette();
+  repaintChartsIfNeeded();
+}
+SYSTEM_DARK.addEventListener('change', () => { if (state.appearance === 'system') applyAppearance('system'); });
+
+/* 玻璃质感 / 液态玻璃 / 流畅模式三者共用一个可用状态：
+   流畅模式开着时玻璃不可选；像素主题是实色表面，玻璃也不生效。 */
+function syncFxControls() {
   const lg = $('liquidGlass');
   const lf = $('lowFx');
-  if (lg) lg.checked = state.liquid;
+  const row = $('glassRow');
+  const pixel = state.theme === 'pixel';
+  const glassOff = state.lowFx || pixel;
+  if (lg) { lg.checked = state.liquid; lg.disabled = glassOff; }
   if (lf) lf.checked = state.lowFx;
+  if (row) {
+    row.classList.toggle('is-disabled', glassOff);
+    els('#glassRow button').forEach((b) => { b.disabled = glassOff; });
+  }
+  const hint = $('fxHint');
+  if (hint) {
+    hint.textContent = pixel
+      ? '像素主题使用实色材料，玻璃质感与折射不生效'
+      : state.lowFx
+        ? '流畅模式已开启：玻璃折射与质感档已关闭，关闭后自动恢复'
+        : '';
+  }
 }
 
 function applyDisplay(ui) {
@@ -199,6 +400,57 @@ function applyAppName(name) {
   if (aboutName) aboutName.innerHTML = esc(n) + ' <b>StarWhisper Sentinel</b>';
 }
 
+/* ---------- 服务器改名（点主机卡上的铅笔，或双击名字） ---------- */
+function heroFallbackName() {
+  const s = state.settings || {};
+  const ip = ((s.ssh && s.ssh.host) || hostFromUrl(s.bt && s.bt.baseUrl) || '').trim();
+  return ip || '服务器';
+}
+
+function beginHeroRename() {
+  const nameEl = $('heroName');
+  if (!nameEl || $('heroRenameInput')) return;
+  const current = String((state.settings && state.settings.displayName) || '').trim().replace(/^my-server$/, '');
+  const input = document.createElement('input');
+  input.id = 'heroRenameInput';
+  input.className = 'hero-name-input';
+  input.type = 'text';
+  input.maxLength = 24;
+  input.spellcheck = false;
+  input.value = current;
+  input.placeholder = nameEl.textContent || '服务器名称';
+  nameEl.style.display = 'none';
+  nameEl.parentNode.insertBefore(input, nameEl.nextSibling);
+  input.focus();
+  input.select();
+  let settled = false;
+  const finish = async (commit) => {
+    if (settled) return;
+    settled = true;
+    const next = input.value.trim().slice(0, 24);
+    input.remove();
+    nameEl.style.display = '';
+    if (!commit || next === current) return;
+    state.settings = Object.assign({}, state.settings, { displayName: next });
+    if (state.snap) state.snap.name = next || heroFallbackName();
+    nameEl.textContent = next || heroFallbackName();
+    const dn = $('displayName');
+    if (dn) dn.value = next;
+    try {
+      await window.sentinel.saveSettings({ displayName: next });
+      window.sentinel.refresh();
+      toast(next ? '已改名为「' + next + '」' : '已恢复自动命名');
+    } catch (e) {
+      toast('改名失败：' + (e.message || e), 'err');
+    }
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  input.addEventListener('blur', () => finish(true));
+}
+
 const GLASS_LEVELS = ['clear', 'std', 'rich'];
 function applyGlass(level) {
   state.glass = GLASS_LEVELS.indexOf(level) >= 0 ? level : 'std';
@@ -214,6 +466,7 @@ function persistLook() {
       await window.sentinel.saveSettings({
         ui: {
           theme: state.theme, accent: state.accent, liquid: state.liquid, lowFx: state.lowFx,
+          appearance: state.appearance,
           showIp: state.showIp, showDomain: state.showDomain, glass: state.glass
         }
       });
@@ -237,8 +490,9 @@ function loadWallSample(url) {
   if (!url || wallSample.src === url) return;
   wallSample.src = url;
   wallSample.ready = false;
+  pixelAccentSeed = false; // 换了壁纸就回到「从壁纸取色」
   const img = new Image();
-  img.onload = () => { wallSample.img = img; wallSample.ready = true; scheduleAdaptiveTint(); };
+  img.onload = () => { wallSample.img = img; wallSample.ready = true; applyPixelPalette(); repaintChartsIfNeeded(); scheduleAdaptiveTint(); };
   img.onerror = () => { wallSample.ready = false; };
   img.src = url;
 }
@@ -259,7 +513,7 @@ function tintCards() {
   const cvs = sheet;
   const ctx = cvs.getContext('2d', { willReadFrequently: true });
   ctx.clearRect(0, 0, 8, 8);
-  const dark = state.theme !== 'dawn';
+  const dark = !isLightTheme();
   els('.glass').forEach((el) => {
     const r = el.getBoundingClientRect();
     if (r.width < 24 || r.height < 24 || r.bottom < 0 || r.top > H) return;
@@ -360,6 +614,8 @@ function switchView(name) {
   els('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
   const content = $('content');
   if (content) content.scrollTop = 0;
+  // 图表在页面隐藏时画不出来，切过来之后补画一次（否则会显示上一次的拉伸位图）
+  requestAnimationFrame(() => repaintChartsIfNeeded());
   if (name === 'terminal') { ensureTerm(); setTimeout(() => { fitTerm(); }, 60); }
   if (name === 'wallpaper') refreshWallpaperView();
   if (navHandler) navHandler(name);
@@ -417,9 +673,6 @@ function render(snap) {
   const v = snapshotView(snap);
   state.snap = snap;
 
-  $('tbHost').textContent = v.name + (v.host ? ' · ' + v.host : '');
-  $('tbStatus').textContent = v.online ? (v.mode === 'demo' ? '演示数据' : MODE_LABEL[v.mode] + ' 在线') : '连接中断';
-  $('tbDot').className = 'dot' + (v.online ? (v.mode === 'demo' ? ' warn' : '') : ' off');
   $('ssDot').className = 'dot' + (v.online ? (v.mode === 'demo' ? ' warn' : '') : ' off');
   $('ssState').textContent = v.online ? (v.mode === 'demo' ? '演示模式' : '在线') : '离线';
   $('ssMode').textContent = (v.mode || 'demo').toUpperCase();
@@ -435,7 +688,7 @@ function render(snap) {
   }
 
   $('heroLive').className = 'live-pill' + (v.online ? '' : ' off');
-  $('heroLive').innerHTML = '<span></span>' + (v.online ? 'LIVE' : 'OFFLINE');
+  $('heroLive').textContent = v.online ? '运行中' : '已离线';
   $('heroName').textContent = v.name;
   const heroIp = $('heroIp');
   if (heroIp) {
@@ -478,7 +731,6 @@ function render(snap) {
   $('nbUp').style.width = clamp((v.up / link) * 100, 2, 100) + '%';
   $('nbDown').style.width = clamp((v.down / link) * 100, 2, 100) + '%';
 
-  $('navDocker').textContent = v.containers.length;
   $('dockerSub').textContent = v.containers.length ? v.containers.filter(isRunning).length + ' / ' + v.containers.length + ' 运行中' : 'Docker 运行状态';
 
   renderDockerMini(v);
@@ -526,8 +778,11 @@ function renderSiteMini(v) {
 function prepareCanvas(canvas) {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
-  const w = Math.max(60, Math.round(rect.width));
-  const h = Math.max(30, Math.round(rect.height));
+  // 视图隐藏时宽度是 0：这时候画会得到一张 60x30 的位图，等视图显示出来就被拉伸成
+  // 一团模糊的色带（切页瞬间的糊影）。隐藏状态下直接跳过，等切到该页再重画。
+  if (rect.width < 2 || rect.height < 2) return null;
+  const w = Math.round(rect.width);
+  const h = Math.round(rect.height);
   if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
@@ -552,7 +807,9 @@ function currentMetric(v, metric) {
 
 function drawLineChart(canvas, values, color, opts = {}) {
   if (!canvas) return;
-  const { ctx, w, h } = prepareCanvas(canvas);
+  const prep = prepareCanvas(canvas);
+  if (!prep) return;
+  const { ctx, w, h } = prep;
   ctx.clearRect(0, 0, w, h);
   if (values.length < 1) values = [0];
   const padX = 2, padTop = 8, padBottom = 4;
@@ -568,7 +825,7 @@ function drawLineChart(canvas, values, color, opts = {}) {
 
   // grid
   ctx.save();
-  ctx.strokeStyle = isLightTheme() ? 'rgba(20,50,90,.10)' : 'rgba(255,255,255,.05)';
+  ctx.strokeStyle = opts.gridColor || (isLightTheme() ? 'rgba(20,50,90,.10)' : 'rgba(255,255,255,.05)');
   ctx.lineWidth = 1;
   for (let i = 1; i <= 3; i++) {
     const y = padTop + (i / 4) * (h - padTop - padBottom);
@@ -628,7 +885,7 @@ function padSeries(vals, n = 40) {
 function renderMainChart(v) {
   const metric = state.chartMetric;
   const vals = padSeries(histSeries(v, metric));
-  const color = paintTint(metric === 'mem' ? '#c0aaff' : metric === 'net' ? '#5ef0c0' : state.accent);
+  const color = paintTint(metric === 'mem' ? '#c0aaff' : metric === 'net' ? '#5ef0c0' : accentForChart());
   drawLineChart($('mainChart'), vals, color, { max: metric === 'net' ? 0 : 100, softMin: metric === 'net' ? 8 : 28 });
 
   const cur = currentMetric(v, metric);
@@ -641,13 +898,13 @@ function renderMainChart(v) {
 
 function renderHeroSpark(v) {
   const vals = padSeries(v.hist.map((p) => num(p.cpu)), 24);
-  return drawLineChart($('heroSpark'), vals.length ? vals : [v.cpu], paintTint(state.accent), { max: 100, softMin: 26, glow: 8, width: 1.6 });
+  return drawLineChart($('heroSpark'), vals.length ? vals : [v.cpu], paintTint(accentForChart()), { max: 100, softMin: 26, glow: 8, width: 1.6 });
 }
 
 function renderPerformance(v) {
   const metric = state.perfMetric;
   const vals = padSeries(histSeries(v, metric));
-  const color = paintTint(metric === 'mem' ? '#c0aaff' : metric === 'net' ? '#5ef0c0' : state.accent);
+  const color = paintTint(metric === 'mem' ? '#c0aaff' : metric === 'net' ? '#5ef0c0' : accentForChart());
   drawLineChart($('perfChart'), vals, color, { max: metric === 'net' ? 0 : 100, softMin: metric === 'net' ? 8 : 28 });
 
   $('pLoad1').textContent = num(v.load[0]).toFixed(2);
@@ -1127,7 +1384,10 @@ function syncAppControls() {
   if ($('appName')) $('appName').value = state.appName;
   setSeg('widgetSizeSeg', 'size', state.widgetSize);
   setSeg('startupSeg', 'startup', state.startup);
-  setSeg('closeActionSeg', 'close', state.closeAction);
+  setSeg('widgetStartSeg', 'wstart', state.widgetAutostart ? 'auto' : 'manual');
+  els('input[name="closeAction"]').forEach((r) => {
+    r.checked = r.value === (state.closeAction === 'quit' ? 'quit' : 'tray');
+  });
   if ($('showWidget')) $('showWidget').checked = state.showWidget;
   if ($('minimizeToTray')) $('minimizeToTray').checked = state.minimizeToTray;
   if ($('closeNotify')) $('closeNotify').checked = state.closeNotify;
@@ -1141,6 +1401,7 @@ function collectAppPatch() {
     appName: state.appName,
     startup: state.startup,
     showWidget: state.showWidget,
+    widgetAutostart: state.widgetAutostart,
     widgetSize: state.widgetSize,
     minimizeToTray: state.minimizeToTray,
     closeAction: state.closeAction,
@@ -1174,11 +1435,12 @@ function fillSettings(s) {
   $('sshPass').value = '';
   $('sshPass').placeholder = (s.ssh && s.ssh.hasPassword) ? '已保存（留空保持不变）' : '留空则保持不变';
   $('sshKeyPath').value = (s.ssh && s.ssh.privateKeyPath) || '';
-  $('displayName').value = s.displayName || '';
+  $('displayName').value = s.displayName === 'my-server' ? '' : (s.displayName || '');
   $('pollSeconds').value = s.pollSeconds || 3;
   $('alwaysOnTop').checked = !s.ui || s.ui.alwaysOnTop !== false;
   applyAccent((s.ui && s.ui.accent) || '#78d7ff');
   applyTheme(s.ui && s.ui.theme);
+  applyAppearance((s.ui && s.ui.appearance) || 'system');
   applyFx(s.ui || {});
   applyGlass(s.ui && s.ui.glass);
   applyDisplay(s.ui || {});
@@ -1186,6 +1448,7 @@ function fillSettings(s) {
   applyAppName(ui.appName);
   state.startup = ui.startup === 'dashboard' || ui.startup === 'widget' ? ui.startup : 'both';
   state.showWidget = ui.showWidget !== false;
+  state.widgetAutostart = ui.widgetAutostart !== false;
   state.widgetSize = ui.widgetSize === 'mini' ? 'mini' : 'normal';
   state.minimizeToTray = ui.minimizeToTray !== false;
   state.closeAction = ['tray', 'quit', 'ask'].indexOf(ui.closeAction) >= 0 ? ui.closeAction : 'tray';
@@ -1209,7 +1472,7 @@ function fillSettings(s) {
 function collectSettings() {
   const patch = {
     mode: (el('#modeGrid .mode-card.active') || {}).dataset ? el('#modeGrid .mode-card.active').dataset.mode : 'demo',
-    displayName: $('displayName').value.trim() || 'my-server',
+    displayName: $('displayName').value.trim(),
     pollSeconds: clamp(Number($('pollSeconds').value) || 3, 1, 30),
     bt: {
       baseUrl: $('btUrl').value.trim(),
@@ -1226,6 +1489,7 @@ function collectSettings() {
     ui: Object.assign({
       accent: state.accent,
       theme: state.theme,
+      appearance: state.appearance,
       liquid: state.liquid,
       lowFx: state.lowFx,
       glass: state.glass,
@@ -1325,7 +1589,25 @@ function wireEvents() {
   };
   bindSeg('widgetSizeSeg', 'size', 'widgetSize');
   bindSeg('startupSeg', 'startup', 'startup');
-  bindSeg('closeActionSeg', 'close', 'closeAction');
+  // 小窗是否随软件启动（下一次启动生效，不影响当前窗口）
+  const ws = $('widgetStartSeg');
+  if (ws) ws.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-wstart]');
+    if (!b) return;
+    state.widgetAutostart = b.dataset.wstart !== 'manual';
+    syncAppControls();
+    persistApp();
+  });
+  // 关闭主界面时：最小化到托盘 / 退出程序
+  els('input[name="closeAction"]').forEach((r) => r.addEventListener('change', () => {
+    if (!r.checked) return;
+    state.closeAction = r.value === 'quit' ? 'quit' : 'tray';
+    persistApp();
+  }));
+  const renameBtn = $('heroRename');
+  if (renameBtn) renameBtn.addEventListener('click', beginHeroRename);
+  const heroNameEl = $('heroName');
+  if (heroNameEl) heroNameEl.addEventListener('dblclick', beginHeroRename);
   const an = $('appName');
   if (an) {
     an.addEventListener('input', (e) => { applyAppName(e.target.value); persistApp(); });
@@ -1432,14 +1714,32 @@ function wireEvents() {
   $('sshTest').addEventListener('click', testSsh);
   $('saveSettings').addEventListener('click', () => saveSettings(false));
   $('saveSettings2').addEventListener('click', () => saveSettings(false));
-  els('#accentRow button').forEach((b) => b.addEventListener('click', () => { applyAccent(b.dataset.accent); persistLook(); }));
-  els('#themeGrid .theme-card').forEach((b) => b.addEventListener('click', () => { applyTheme(b.dataset.theme); persistLook(); }));
+  els('#accentRow button').forEach((b) => b.addEventListener('click', () => {
+    if (state.theme === 'pixel') pixelAccentSeed = true;
+    applyAccent(b.dataset.accent);
+    persistLook();
+  }));
+  els('#themeGrid .theme-card').forEach((b) => b.addEventListener('click', () => { applyTheme(b.dataset.theme, true); persistLook(); }));
+  els('#appearanceSeg button').forEach((b) => b.addEventListener('click', () => { applyAppearance(b.dataset.appearance); persistLook(); }));
   const custom = $('accentCustom');
-  if (custom) custom.addEventListener('input', (e) => { applyAccent(e.target.value); els('#accentRow button').forEach((b) => b.classList.remove('active')); custom.classList.add('is-active'); persistLook(); });
+  if (custom) custom.addEventListener('input', (e) => {
+    if (state.theme === 'pixel') pixelAccentSeed = true;
+    applyAccent(e.target.value);
+    els('#accentRow button').forEach((b) => b.classList.remove('active'));
+    custom.classList.add('is-active');
+    persistLook();
+  });
   const lg = $('liquidGlass');
-  if (lg) lg.addEventListener('change', () => { applyFx({ liquid: lg.checked, lowFx: state.lowFx }); persistLook(); });
+  if (lg) lg.addEventListener('change', () => {
+    // 与流畅模式互斥：开玻璃就关流畅
+    applyFx(lg.checked ? { liquid: true, lowFx: false } : { liquid: false, lowFx: false });
+    persistLook();
+  });
   const lf = $('lowFx');
-  if (lf) lf.addEventListener('change', () => { applyFx({ liquid: state.liquid, lowFx: lf.checked }); persistLook(); });
+  if (lf) lf.addEventListener('change', () => {
+    applyFx(lf.checked ? { liquid: false, lowFx: true } : { liquid: state.liquidMemory, lowFx: false });
+    persistLook();
+  });
   const si = $('showIp');
   if (si) si.addEventListener('change', () => { applyDisplay({ showIp: si.checked, showDomain: state.showDomain }); persistLook(); });
   const sd = $('showDomain');
@@ -1448,6 +1748,8 @@ function wireEvents() {
   if (gr) gr.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-glass]');
     if (!b) return;
+    if (state.lowFx) { toast('流畅模式下不能选玻璃质感，先关掉流畅模式'); return; }
+    if (state.theme === 'pixel') { toast('像素主题是实色材料，玻璃质感不生效'); return; }
     applyGlass(b.dataset.glass);
     persistLook();
   });
@@ -1518,6 +1820,7 @@ async function boot() {
     state.settings = Object.assign({}, prev, s, { ui: Object.assign({}, prev.ui || {}, s.ui || {}) });
     const ui = s.ui || {};
     applyTheme(ui.theme);
+    applyAppearance(ui.appearance || 'system');
     applyFx(ui);
     applyGlass(ui.glass);
     applyDisplay(ui);
@@ -1525,6 +1828,7 @@ async function boot() {
     if (ui.accent) applyAccent(ui.accent);
     state.startup = ui.startup || 'both';
     state.showWidget = ui.showWidget !== false;
+    state.widgetAutostart = ui.widgetAutostart !== false;
     state.widgetSize = ui.widgetSize === 'mini' ? 'mini' : 'normal';
     state.minimizeToTray = ui.minimizeToTray !== false;
     state.closeAction = ['tray', 'quit', 'ask'].indexOf(ui.closeAction) >= 0 ? ui.closeAction : 'tray';

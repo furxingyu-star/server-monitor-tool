@@ -22,6 +22,11 @@ const SHOT = argValue('shot');
 const SHOT_VIEW = argValue('view');
 const SHOT_SCROLL = Number(argValue('scroll') || 0);
 const OUT_DIR = argValue('out') || path.join(ROOT, 'shots');
+const SHOT_THEME = argValue('theme');
+const SHOT_ACCENT = argValue('accent');
+const SHOT_WALL = argValue('wall');
+const SHOT_RENAME = argValue('rename');
+const SHOT_APPEARANCE = argValue('appearance');
 const isShot = !!SHOT;
 
 let store, engine, tray = null, widgetWin = null, dashWin = null, isQuitting = false;
@@ -108,7 +113,7 @@ class DataEngine {
       if (mode === 'bt') {
         if (!this.bt || this.bt.baseUrl !== new BtClient(this.settings.bt).baseUrl) this.bt = new BtClient(this.settings.bt);
         snap = await this.bt.snapshot(this.last || {});
-        snap.name = this.settings.displayName || '';
+        snap.name = this.settings.displayName || hostOf(this.settings.bt.baseUrl);
         if (this.tick % 5 === 1) {
           try {
             const list = await this.bt.dockerList();
@@ -122,10 +127,11 @@ class DataEngine {
       } else if (mode === 'ssh') {
         if (!this.ssh.connected) await this.ssh.connect(this.settings);
         snap = await this.ssh.metrics();
-        snap.name = this.settings.displayName || '';
+        snap.name = this.settings.displayName || (this.settings.ssh && this.settings.ssh.host) || '';
         snap.cpuHistory = [...((this.last && this.last.cpuHistory) || []), { t: Date.now(), cpu: snap.cpu.usage, mem: snap.mem.percent, net: snap.net.up + snap.net.down }].slice(-60);
       } else {
         snap = this.demo.next();
+        snap.name = this.settings.displayName || snap.name || '';
       }
       this.last = snap;
       this.lastError = null;
@@ -201,6 +207,10 @@ function uiPrefs() {
 function appTitle() {
   const name = String(uiPrefs().appName || '').trim();
   return name || '星语哨兵';
+}
+
+function hostOf(url) {
+  try { return new URL(String(url || '')).hostname || ''; } catch { return ''; }
 }
 
 function widgetDims() {
@@ -601,6 +611,12 @@ async function captureShot() {
       try { await win.webContents.executeJavaScript('document.getElementById("content").scrollTo({top:' + SHOT_SCROLL + ',behavior:"instant"})'); } catch {}
       await new Promise((r) => setTimeout(r, 500));
     }
+    if (t === 'dashboard' && SHOT_RENAME) {
+      try {
+        await win.webContents.executeJavaScript('(() => { const b = document.getElementById("heroRename"); if (b) b.click(); const i = document.getElementById("heroRenameInput"); if (i) { i.value = ' + JSON.stringify(SHOT_RENAME) + '; i.select(); } })()');
+        await new Promise((r) => setTimeout(r, 400));
+      } catch (e) { console.log('RENAME_ERR ' + e.message); }
+    }
     if (process.argv.includes('--fps')) {
       try {
         const fps = await win.webContents.executeJavaScript(`new Promise((res) => {
@@ -648,6 +664,19 @@ async function captureShot() {
 
 app.whenReady().then(async () => {
   store = new Store();
+  // 截图预览用：--theme=pixel --accent=#1a73e8 只在内存里覆盖外观，不写回用户设置。
+  if (isShot && (SHOT_THEME || SHOT_ACCENT || SHOT_WALL || SHOT_APPEARANCE)) {
+    const baseLoad = store.load.bind(store);
+    store.load = () => {
+      const s = baseLoad();
+      s.ui = Object.assign({}, s.ui);
+      if (SHOT_THEME) s.ui.theme = SHOT_THEME;
+      if (SHOT_ACCENT) s.ui.accent = SHOT_ACCENT;
+      if (SHOT_WALL) s.wallpaper = Object.assign({}, s.wallpaper, { path: SHOT_WALL });
+      if (SHOT_APPEARANCE) s.ui.appearance = SHOT_APPEARANCE;
+      return s;
+    };
+  }
   engine = new DataEngine();
   registerIpc();
 
@@ -667,7 +696,8 @@ app.whenReady().then(async () => {
   } else {
     const ui = uiPrefs();
     const firstRun = !store.load().seenWelcome;
-    if (ui.showWidget !== false) createWidget();
+    // 悬浮窗：显示开关 + 是否随软件启动，两者都满足才在启动时创建
+    if (ui.showWidget !== false && ui.widgetAutostart !== false) createWidget();
     buildTray();
     engine.start();
     // Startup preference: dashboard / widget-only / both.
