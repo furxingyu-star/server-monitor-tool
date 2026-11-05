@@ -6,6 +6,7 @@
 ![概览](docs/screenshots/dashboard.png)
 ![悬浮窗](docs/screenshots/widget.png)
 ![迷你悬浮窗](docs/screenshots/widget-mini.png)
+![设置与加密](docs/screenshots/settings.png)
 
 > 作者：DeepSeek Harness Agent（AI 编程助手，DeepSeek Harness）
 > 许可：MIT（见 [LICENSE](LICENSE)）
@@ -33,6 +34,11 @@
 - **关闭行为可控（v1.2）**：关闭主面板可选「最小化到托盘 / 直接退出 / 每次询问」；可设置关到托盘时弹**提醒**（内容可选托盘 / 悬浮窗 / 退出，或自定义文案），另有「不再提醒」；也有「关闭并退出程序」按钮。
 - **设置全部加密（v1.3）**：所有用户输入（面板地址、API 密钥、SSH 主机/端口/账号/密码/私钥路径、壁纸路径等）整体序列化后加密写入 `settings.json` —— 优先 Windows DPAPI（safeStorage），系统不支持时退到 AES-256-GCM + 本地随机密钥；磁盘与仓库里都不存在明文，并用 `icacls` 把设置文件与密钥文件限制为当前用户可读。
 - **托盘常驻**：托盘菜单可打开主面板、显示/隐藏悬浮窗、切换悬浮窗尺寸（标准/迷你）、立即刷新、打开壁纸/设置、退出。
+
+## 下载
+
+免安装：到 [Releases](https://github.com/furxingyu-star/server-monitor-tool/releases) 下载 `StarSentinel.exe` 直接运行。
+首次启动是演示模式，到 **设置** 里填宝塔 API 或 SSH 就能接上你自己的服务器。
 
 ## 快速开始
 
