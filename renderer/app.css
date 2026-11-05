@@ -378,6 +378,7 @@ html.is-scrolling .seg.is-ready > .seg-ind, html.is-scrolling .seg-row.is-ready 
 .term-tools button { height: 22px; padding: 0 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04); color: rgba(200,222,245,.55); font-size: 8.5px; }
 .term-tools button:hover { background: rgba(255,255,255,.1); color: #fff; }
 .term-body { flex: 1; min-height: 0; padding: 10px 6px 8px 12px; background: rgba(3,8,16,.48); }
+.term-host { height: 100%; min-height: 0; }
 .term-body .xterm { height: 100%; }
 .term-body .xterm-viewport { background: transparent !important; }
 .term-empty { position: absolute; inset: 38px 0 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center;

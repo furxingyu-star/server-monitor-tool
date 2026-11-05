@@ -1158,7 +1158,7 @@ function ensureTerm() {
     });
     const fit = new FitAddon.FitAddon();
     term.loadAddon(fit);
-    term.open($('termBody'));
+    term.open($('termHost'));
     state.term = term;
     state.fit = fit;
     state.termReady = true;
@@ -1167,6 +1167,16 @@ function ensureTerm() {
     term.onData(onTermData);
     setTimeout(fitTerm, 80);
     window.addEventListener('resize', () => fitTerm());
+    // 主题/外观切换会改变 .term-body 的 padding，容器尺寸随之变化但不触发 window.resize，
+    // 用 ResizeObserver 跟随容器重算行列，避免底部留白或末行被裁。
+    if (window.ResizeObserver) {
+      let raf = 0;
+      state.termRO = new ResizeObserver(() => {
+        if (raf) return;
+        raf = requestAnimationFrame(() => { raf = 0; fitTerm(); });
+      });
+      state.termRO.observe($('termHost'));
+    }
     setTermStatus('未连接', '');
   } catch (e) {
     console.error(e);

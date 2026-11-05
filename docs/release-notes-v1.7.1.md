@@ -7,6 +7,9 @@
   - 修法：壁纸加载时把壁纸一次性缩到 192px 宽的采样网格（`buildWallGrid`），之后 `tintCards()` 纯 JS 在网格上按卡片矩形取最多 8×8 点求均值，热路径不再创建 canvas、不再 `getImageData`；`--adapt` 计算公式与视觉结果不变。
   - 附带：`sampleWallSeed` 按壁纸路径缓存，避免每次应用像素调色板都做一次 16×16 读回。
 - **设置页「外观模式」恢复单行**：像素主题下 `.seg-row` 的网格轨道下限 120px 会把 279px 窄列里的三个按钮挤成两行（行高 98px），改为 `minmax(0, 1fr)` 后是一行三等分（按钮 86×33）。
+- **终端最后一行被裁（显示不全）**：终端视图里 xterm 内容比卡片高 11px，底部最后一行（SSH banner 的 `Last login` / 提示符）被卡片 `overflow:hidden` 裁掉一半。
+  - 根因：xterm 的 FitAddon 只减 `.xterm` 自身内边距，而它量的是父容器 `.term-body` 的 border-box 高度（583px），没减 `.term-body` 自己的 `14px/10px` 上下内边距 —— 于是按 583px 算出 33 行（580px），实际内容区只有 559px，溢出 11px 被裁。
+  - 修法：`.term-body` 内加一层无内边距、高度 100% 的 `.term-host` 承载 xterm，FitAddon 量到的就是真实内容区（559px → 30 行）；再加 `ResizeObserver` 跟随主题/外观切换后 `.term-body` 内边距变化重新 fit。
 - **悬浮窗与主面板统一为同一套 Material You 表面**（此前两窗一个是实色卡片、一个是半透明壁纸+蓝色光斑，观感割裂）：
   - 悬浮窗删除像素主题下的壁纸与 `.veil` 光斑（主面板像素主题本就是干净实色），窗口底色改用**卡片色** `--p-surface-1`（深色实测 rgb(24,26,29)，与主面板卡片逐像素一致），圆角 28 → 24，mini 18。
   - 调色板改用与主面板 `applyPixelPalette()` 完全相同的 M3 角色公式（此前悬浮窗的 on-surface/variant/muted 饱和度是另一套数值，两窗同屏时颜色不是同一个色）。
