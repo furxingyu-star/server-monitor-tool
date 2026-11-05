@@ -1,0 +1,78 @@
+# ---- dependencies ----
+node_modules/
+.pnpm-store/
+
+# ---- build / packaged output ----
+build/
+dist/
+release/
+out/
+*.asar
+
+# ---- runtime screenshots / probes ----
+shots/
+shots-*/
+shots*.png
+zoom-*.png
+
+# ---- release artifacts produced locally ----
+_publish/
+*.bundle
+
+# ---- logs ----
+*.log
+logs/
+
+# ---- ephemeral probe / user-data dirs ----
+.perfud-*
+.shotud-*
+.cpuud-*
+tmp/
+ud/
+Cache/
+Code Cache/
+GPUCache/
+DawnGraphiteCache/
+DawnWebGPUCache/
+GrShaderCache/
+ShaderCache/
+blob_storage/
+Local Storage/
+Session Storage/
+Shared Dictionary/
+Dictionaries/
+Network/
+Extension State/
+GPUPersistentCache/
+
+# ---- local settings / secrets ----
+settings.json
+config.local.json
+.env
+.env.*
+*.pem
+*.key
+
+# ---- binaries ----
+*.exe
+*.dll
+*.node
+*.7z
+*.tgz
+*.zip
+
+# ---- python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ---- editor / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# internal release-prep notes (asset inventory; not for publication)
+docs/repo-prep.md

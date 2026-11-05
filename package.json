@@ -1,0 +1,22 @@
+{
+  "name": "star-sentinel",
+  "version": "1.2.0",
+  "description": "星语哨兵 — 宝塔服务器监控悬浮窗",
+  "main": "electron/main.js",
+  "author": "DeepSeek Harness Agent (AI)",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "shot": "electron . --screenshot",
+    "pack": "node scripts/pack.mjs"
+  },
+  "dependencies": {
+    "ssh2": "1.17.0",
+    "@xterm/xterm": "5.5.0",
+    "@xterm/addon-fit": "0.10.0"
+  },
+  "devDependencies": {
+    "electron": "45.2.2",
+    "@electron/packager": "20.3.0"
+  }
+}

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; style-src 'self' 'unsafe-inline'; script-src 'self';">
+<title>星语哨兵</title>
+<link rel="stylesheet" href="widget.css">
+</head>
+<body>
+  <div class="widget" id="widget">
+    <div class="wallpaper" id="wallpaper"></div>
+    <div class="veil"></div>
+    <div class="glow g1"></div>
+    <div class="glow g2"></div>
+    <div class="noise"></div>
+    <div class="sheen"></div>
+
+    <header class="w-head">
+      <div class="brand">
+        <span class="orb"><span class="orb-core"></span></span>
+        <div class="brand-text">
+          <b id="wBrand">星语哨兵</b>
+          <span id="wHost">server</span>
+        </div>
+      </div>
+      <div class="head-actions">
+        <button class="icon-btn" id="pinBtn" title="取消置顶">
+          <svg viewBox="0 0 24 24" width="13" height="13"><path d="M9 4h6l-1 5 3 3v2h-4v6l-1 1-1-1v-6H7v-2l3-3-1-5z" fill="currentColor"/></svg>
+        </button>
+        <button class="icon-btn" id="openBtn" title="打开主面板">
+          <svg viewBox="0 0 24 24" width="13" height="13"><path d="M5 5h6v2H7v10h10v-4h2v6H5V5zm9 0h5v5h-2V8.4l-5.3 5.3-1.4-1.4L15.6 7H14V5z" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="main-area" id="mainArea">
+      <div class="rings">
+        <div class="ring" data-kind="cpu">
+          <svg viewBox="0 0 100 100">
+            <defs>
+              <linearGradient id="gCpu" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9fe8ff"/><stop offset="1" stop-color="#4a9dff"/></linearGradient>
+            </defs>
+            <circle class="track" cx="50" cy="50" r="42"/>
+            <circle class="bar" id="ringCpu" cx="50" cy="50" r="42" stroke="url(#gCpu)"/>
+          </svg>
+          <div class="ring-label"><b id="cpuVal">0<span>%</span></b><i>CPU</i></div>
+          <div class="ring-sub" id="cpuSub">2 核</div>
+        </div>
+        <div class="ring" data-kind="mem">
+          <svg viewBox="0 0 100 100">
+            <defs>
+              <linearGradient id="gMem" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d3c0ff"/><stop offset="1" stop-color="#8069ff"/></linearGradient>
+            </defs>
+            <circle class="track" cx="50" cy="50" r="42"/>
+            <circle class="bar" id="ringMem" cx="50" cy="50" r="42" stroke="url(#gMem)"/>
+          </svg>
+          <div class="ring-label"><b id="memVal">0<span>%</span></b><i>内存</i></div>
+          <div class="ring-sub" id="memSub">— / —</div>
+        </div>
+        <div class="ring" data-kind="disk">
+          <svg viewBox="0 0 100 100">
+            <defs>
+              <linearGradient id="gDisk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9dffd9"/><stop offset="1" stop-color="#22c9a0"/></linearGradient>
+            </defs>
+            <circle class="track" cx="50" cy="50" r="42"/>
+            <circle class="bar" id="ringDisk" cx="50" cy="50" r="42" stroke="url(#gDisk)"/>
+          </svg>
+          <div class="ring-label"><b id="diskVal">0<span>%</span></b><i>磁盘</i></div>
+          <div class="ring-sub" id="diskSub">— / —</div>
+        </div>
+      </div>
+
+      <div class="w-net">
+        <div class="net-item"><span class="up">↑</span><b id="wUp">0 KB/s</b></div>
+        <div class="net-item"><span class="down">↓</span><b id="wDown">0 KB/s</b></div>
+        <div class="net-item load"><span>LOAD</span><b id="wLoad">0.00</b></div>
+      </div>
+
+      <canvas id="spark" height="46"></canvas>
+    </div>
+
+    <footer class="w-foot">
+      <div class="foot-left">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="modeLabel">演示模式</span>
+      </div>
+      <span class="foot-mid" id="wUptime">—</span>
+      <span class="clock" id="wClock">--:--</span>
+    </footer>
+  </div>
+<script src="glass.js"></script>
+<script src="widget.js"></script>
+</body>
+</html>

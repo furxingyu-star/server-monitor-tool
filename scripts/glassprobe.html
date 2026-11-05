@@ -1,0 +1,22 @@
+<!doctype html><html><head><style>html,body{height:100%;margin:0;background:#08101f}
+#bg{position:fixed;inset:0;background:
+  repeating-linear-gradient(45deg, rgba(255,255,255,.14) 0 18px, rgba(255,255,255,.02) 18px 40px),
+  radial-gradient(60% 80% at 20% 20%, #2a6fb0, transparent 60%),
+  radial-gradient(50% 70% at 80% 70%, #e8823c, transparent 60%),
+  linear-gradient(135deg,#0b1e3a,#1d3f66);}
+#bg .word{position:absolute;left:24px;top:18px;font:700 64px/1 "Segoe UI",sans-serif;color:#fff;letter-spacing:2px;opacity:.9}
+#bg .word2{position:absolute;left:40px;top:110px;font:700 44px/1 "Segoe UI",sans-serif;color:#ffe08a;opacity:.9}
+.box{position:absolute;top:180px;width:330px;height:210px;border-radius:28px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.35)}
+#a{left:40px;backdrop-filter:url(#f1) blur(1px) saturate(1.4)}
+#b{left:420px;backdrop-filter:blur(6px) saturate(1.2)}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <filter id="f1" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="7" result="noise"/>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="60" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</defs></svg>
+<div id="bg"><div class="word">LIQUID GLASS</div><div class="word2">STAR SENTINEL 1234</div></div>
+<div class="box" id="a"></div>
+<div class="box" id="b"></div>
+</body></html>

@@ -1,0 +1,17 @@
+const port=9333;
+const list=await (await fetch('http://127.0.0.1:'+port+'/json')).json();
+console.log(list.map(t=>t.type+' '+t.url).join('\n'));
+const page=list.find(t=>/widget\.html/.test(t.url));
+const ws=new WebSocket(page.webSocketDebuggerUrl); let id=0; const pend=new Map();
+ws.onmessage=e=>{const m=JSON.parse(e.data); if(m.id&&pend.has(m.id)){pend.get(m.id)(m); pend.delete(m.id);}};
+await new Promise(r=>ws.onopen=r);
+const send=(method,params)=>new Promise(r=>{const i=++id;pend.set(i,r);ws.send(JSON.stringify({id:i,method,params}))});
+const ev=async(expr)=>{const r=await send('Runtime.evaluate',{expression:expr,returnByValue:true,awaitPromise:true});return JSON.stringify(r.result||r.error)};
+console.log('sentinel=',await ev('typeof window.sentinel'));
+console.log('keys=',await ev('Object.keys(window.sentinel||{}).join(",")'));
+console.log('open=',await ev('String(window.sentinel && window.sentinel.openDashboard)'));
+console.log('call=',await ev('window.sentinel.openDashboard().then(()=>"ok").catch(e=>"ERR:"+e.message)'));
+await new Promise(r=>setTimeout(r,2500));
+const l2=await (await fetch('http://127.0.0.1:'+port+'/json')).json();
+console.log('after:',l2.map(t=>t.type+' '+t.url).join('\n'));
+process.exit(0);

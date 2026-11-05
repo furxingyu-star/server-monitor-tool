@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; style-src 'self' 'unsafe-inline'; script-src 'self';">
+<title>星语哨兵 · StarWhisper Sentinel</title>
+<link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="shell" id="shell">
+  <div class="bg" id="bg"></div>
+  <div class="bg-tint"></div>
+  <div class="aurora a1"></div>
+  <div class="aurora a2"></div>
+  <div class="aurora a3"></div>
+  <div class="grain"></div>
+  <div class="pointer-glow" id="pointerGlow"></div>
+
+  <header class="titlebar">
+    <div class="tb-brand">
+      <span class="orb"><span></span></span>
+      <div class="tb-name">
+        <b id="brandName">星语哨兵</b>
+        <i id="brandSub">STARWHISPER SENTINEL</i>
+      </div>
+    </div>
+    <div class="tb-center">
+      <div class="conn-pill" id="connPill">
+        <span class="dot" id="tbDot"></span>
+        <span id="tbStatus">正在连接…</span>
+        <span class="sep"></span>
+        <span id="tbHost" class="host">—</span>
+      </div>
+      <div class="tb-clock" id="tbClock">--:--:--</div>
+    </div>
+    <div class="tb-actions">
+      <button class="tb-btn" id="refreshBtn" title="立即刷新">
+        <svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <span class="tb-divider"></span>
+      <button class="tb-btn win" id="minBtn" title="最小化"><svg viewBox="0 0 12 12"><path d="M2 6h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+      <button class="tb-btn win" id="maxBtn" title="最大化"><svg viewBox="0 0 12 12"><rect x="2.2" y="2.2" width="7.6" height="7.6" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+      <button class="tb-btn win close" id="closeBtn" title="关闭"><svg viewBox="0 0 12 12"><path d="M3 3l6 6M9 3L3 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="side-label">导航</div>
+    <nav class="nav">
+      <button class="nav-item active" data-view="overview">
+        <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>
+        <span>概览</span>
+      </button>
+      <button class="nav-item" data-view="performance">
+        <svg viewBox="0 0 24 24"><path d="M3 13h4l2.4-6 3.6 12 2.6-8 1.6 4H21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>性能</span>
+      </button>
+      <button class="nav-item" data-view="containers">
+        <svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        <span>容器</span><span class="nav-badge" id="navDocker">0</span>
+      </button>
+      <button class="nav-item" data-view="sites">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3.6 5.2 3.6 8.5s-1.2 6.2-3.6 8.5c-2.4-2.3-3.6-5.2-3.6-8.5S9.6 5.8 12 3.5z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+        <span>网站</span>
+      </button>
+      <button class="nav-item" data-view="terminal">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M7 9.5l3 2.6-3 2.6M12.5 15h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>终端</span>
+      </button>
+      <button class="nav-item" data-view="wallpaper">
+        <svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M4.5 17l5-5 4 4 2.5-2.5 3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>壁纸</span>
+      </button>
+      <button class="nav-item" data-view="settings">
+        <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg>
+        <span>设置</span>
+      </button>
+    </nav>
+
+    <div class="side-spacer"></div>
+    <div class="side-status glass">
+      <div class="ss-head"><span class="dot" id="ssDot"></span><b id="ssState">连接中</b><span class="ss-mode" id="ssMode">DEMO</span></div>
+      <div class="ss-host" id="ssHost">—</div>
+      <div class="ss-meta"><span id="ssPoll">每 3 秒刷新</span><span id="ssUpdated">—</span></div>
+      <button class="ss-refresh" id="ssRefresh">立即刷新</button>
+    </div>
+    <div class="side-foot">
+      <span>v1.2.0</span><span>·</span><span>液态玻璃</span>
+    </div>
+  </aside>
+
+  <main class="content" id="content">
+    <!-- OVERVIEW -->
+    <section class="view active" id="view-overview">
+      <div class="view-head">
+        <div>
+          <h1>服务器概览</h1>
+          <p class="sub">实时状态、资源水位与容器运行情况</p>
+        </div>
+        <div class="head-actions">
+          <button class="ghost-btn" id="openPanelBtn">
+            <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            打开宝塔
+          </button>
+          <button class="primary-btn" id="refreshBtn2">刷新数据</button>
+        </div>
+      </div>
+
+      <div class="offline-banner" id="offlineBanner">
+        <span class="ob-dot"></span><span id="offlineText">连接中断</span>
+        <button id="fixConnBtn">检查连接设置</button>
+      </div>
+
+      <div class="top-grid">
+        <article class="glass hero-card">
+          <div class="hero-glow"></div>
+          <div class="hero-top">
+            <span class="eyebrow">服务器</span>
+            <span class="live-pill" id="heroLive"><span></span>LIVE</span>
+          </div>
+          <div class="hero-name" id="heroName">服务器</div>
+          <div class="hero-ip" id="heroIp">IP —</div>
+          <div class="hero-system" id="heroSystem">Debian GNU/Linux 13</div>
+          <div class="hero-meta">
+            <div class="hm"><i>运行时长</i><b id="heroUptime">—</b></div>
+            <div class="hm"><i>宝塔版本</i><b id="heroVersion">—</b></div>
+            <div class="hm"><i>数据源</i><b id="heroSource">演示</b></div>
+          </div>
+          <div class="hero-spark">
+            <canvas id="heroSpark" height="52"></canvas>
+            <span class="hs-label">CPU 实时脉冲</span>
+          </div>
+        </article>
+
+        <article class="glass metric-card" data-metric="cpu">
+          <div class="mc-head"><span class="mc-icon cpuIcon"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 3v2M15 3v2M9 19v2M15 19v2M3 9h2M3 15h2M19 9h2M19 15h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span><span>CPU</span><em id="cpuTrend">—</em></div>
+          <div class="mc-value"><b id="cpuValue">0</b><span>%</span></div>
+          <div class="mc-bar"><i id="cpuBar" style="width:0%"></i></div>
+          <div class="mc-foot"><span id="cpuSub">2 核</span><span id="cpuLoad">负载 0.00</span></div>
+        </article>
+
+        <article class="glass metric-card" data-metric="mem">
+          <div class="mc-head"><span class="mc-icon memIcon"><svg viewBox="0 0 24 24"><rect x="3.5" y="7" width="17" height="10" rx="2.5"/><path d="M7 10v4M11 10v4M15 10v4M19 10v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span>内存</span><em id="memTrend">—</em></div>
+          <div class="mc-value"><b id="memValue">0</b><span>%</span></div>
+          <div class="mc-bar"><i id="memBar" style="width:0%"></i></div>
+          <div class="mc-foot"><span id="memSub">— / —</span><span id="memFree">可用 —</span></div>
+        </article>
+
+        <article class="glass metric-card" data-metric="disk">
+          <div class="mc-head"><span class="mc-icon diskIcon"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6.5" rx="8" ry="3"/><path d="M4 6.5v11c0 1.7 3.6 3 8 3s8-1.3 8-3v-11M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span><span>磁盘</span><em id="diskTrend">—</em></div>
+          <div class="mc-value"><b id="diskValue">0</b><span>%</span></div>
+          <div class="mc-bar"><i id="diskBar" style="width:0%"></i></div>
+          <div class="mc-foot"><span id="diskSub">— / —</span><span id="diskFree">剩余 —</span></div>
+        </article>
+      </div>
+
+      <div class="mid-grid">
+        <article class="glass chart-card">
+          <div class="card-head">
+            <div><h2>资源曲线</h2><p>最近 3 分钟 · 实时采样</p></div>
+            <div class="seg" id="chartSeg">
+              <button class="active" data-metric="cpu">CPU</button>
+              <button data-metric="mem">内存</button>
+              <button data-metric="net">网络</button>
+            </div>
+          </div>
+          <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+          <div class="chart-legend">
+            <span><i class="lg lg-cpu"></i>实时值 <b id="chartNow">0%</b></span>
+            <span><i class="lg lg-avg"></i>平均 <b id="chartAvg">0%</b></span>
+            <span><i class="lg lg-max"></i>峰值 <b id="chartMax">0%</b></span>
+          </div>
+        </article>
+
+        <article class="glass net-card">
+          <div class="card-head"><div><h2>网络与 IO</h2><p>实时吞吐</p></div><span class="live-tag">LIVE</span></div>
+          <div class="net-pair">
+            <div class="np up"><span class="np-arrow">↑</span><div><i>上传</i><b id="netUp">0 B/s</b><small id="netUpTotal">累计 —</small></div></div>
+            <div class="np down"><span class="np-arrow">↓</span><div><i>下载</i><b id="netDown">0 B/s</b><small id="netDownTotal">累计 —</small></div></div>
+          </div>
+          <div class="mini-grid">
+            <div class="mini"><i>负载 1m</i><b id="load1">0.00</b></div>
+            <div class="mini"><i>负载 5m</i><b id="load5">0.00</b></div>
+            <div class="mini"><i>磁盘读</i><b id="ioRead">0 B/s</b></div>
+            <div class="mini"><i>磁盘写</i><b id="ioWrite">0 B/s</b></div>
+          </div>
+          <div class="net-bars">
+            <div class="nb"><span>↑</span><i id="nbUp"></i></div>
+            <div class="nb"><span>↓</span><i id="nbDown"></i></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="bottom-grid">
+        <article class="glass list-card">
+          <div class="card-head"><div><h2>容器</h2><p id="dockerSub">Docker 运行状态</p></div><button class="mini-btn" data-nav="containers">全部</button></div>
+          <div class="list-body" id="dockerListMini"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div>
+        </article>
+        <article class="glass list-card">
+          <div class="card-head"><div><h2>网站</h2><p id="sitesSub">站点在线情况</p></div><button class="mini-btn" data-nav="sites">全部</button></div>
+          <div class="list-body" id="siteListMini"></div>
+        </article>
+        <article class="glass quick-card">
+          <div class="card-head"><div><h2>快捷操作</h2><p>常用维护入口</p></div></div>
+          <div class="quick-grid">
+            <button class="quick" id="qTerminal"><span class="qi">⌘</span><b>服务器终端</b><small>SSH / 演示</small></button>
+            <button class="quick" id="qWallpaper"><span class="qi">◐</span><b>更换壁纸</b><small>内置渐变 / 本地</small></button>
+            <button class="quick" id="qRefresh"><span class="qi">↻</span><b>立即刷新</b><small>拉取最新指标</small></button>
+            <button class="quick" id="qPanel"><span class="qi">↗</span><b>宝塔面板</b><small>浏览器打开</small></button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- PERFORMANCE -->
+    <section class="view" id="view-performance">
+      <div class="view-head"><div><h1>性能</h1><p class="sub">CPU、内存、磁盘与负载的细节视图</p></div><button class="ghost-btn" data-nav="overview">返回概览</button></div>
+      <div class="perf-top glass chart-card">
+        <div class="card-head"><div><h2>资源历史</h2><p>最近 3 分钟</p></div>
+          <div class="seg" id="perfSeg"><button class="active" data-metric="cpu">CPU</button><button data-metric="mem">内存</button><button data-metric="net">网络</button></div>
+        </div>
+        <div class="chart-wrap tall"><canvas id="perfChart"></canvas></div>
+      </div>
+      <div class="perf-grid">
+        <article class="glass pad-card">
+          <h2>系统负载</h2>
+          <div class="load-big" id="loadBig">
+            <div><b id="pLoad1">0.00</b><i>1 分钟</i></div>
+            <div><b id="pLoad5">0.00</b><i>5 分钟</i></div>
+            <div><b id="pLoad15">0.00</b><i>15 分钟</i></div>
+          </div>
+          <div class="load-line"><span>负载水位</span><div class="lr"><i id="loadBar" style="width:0%"></i></div></div>
+          <p class="hint" id="loadHint">负载处于安全范围</p>
+        </article>
+        <article class="glass pad-card">
+          <h2>磁盘分区</h2>
+          <div id="diskParts" class="parts"></div>
+        </article>
+        <article class="glass pad-card">
+          <h2>磁盘 IO</h2>
+          <div class="io-row"><div><i>读取</i><b id="pIoRead">0</b><span>B/s</span></div><div><i>写入</i><b id="pIoWrite">0</b><span>B/s</span></div></div>
+          <div class="io-bars"><div><span>R</span><i id="ioBarR"></i></div><div><span>W</span><i id="ioBarW"></i></div></div>
+          <p class="hint">IO 速率为宝塔面板实时采样</p>
+        </article>
+        <article class="glass pad-card">
+          <h2>运行环境</h2>
+          <div class="kv"><span>系统</span><b id="pSystem">—</b></div>
+          <div class="kv"><span>CPU 核心</span><b id="pCores">—</b></div>
+          <div class="kv"><span>面板版本</span><b id="pVersion">—</b></div>
+          <div class="kv"><span>数据来源</span><b id="pSource">—</b></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- CONTAINERS -->
+    <section class="view" id="view-containers">
+      <div class="view-head"><div><h1>容器</h1><p class="sub">Docker 容器运行状态</p></div><div class="head-actions"><button class="ghost-btn" id="dockerOpenPanel">宝塔 Docker</button><button class="primary-btn" id="dockerRefresh">刷新</button></div></div>
+      <article class="glass table-card">
+        <div class="table-head"><span>状态</span><span>名称</span><span>镜像</span><span>操作</span></div>
+        <div id="containerTable" class="table-body"></div>
+      </article>
+    </section>
+
+    <!-- SITES -->
+    <section class="view" id="view-sites">
+      <div class="view-head"><div><h1>网站</h1><p class="sub">宝塔站点与域名</p></div><div class="head-actions"><button class="ghost-btn" id="sitesOpenPanel">宝塔网站</button></div></div>
+      <div class="site-grid" id="siteGrid"></div>
+    </section>
+
+    <!-- TERMINAL -->
+    <section class="view terminal-view" id="view-terminal">
+      <div class="view-head">
+        <div><h1>终端</h1><p class="sub" id="termSub">连接服务器 Shell</p></div>
+        <div class="head-actions">
+          <span class="term-status" id="termStatus"><i></i>未连接</span>
+          <button class="ghost-btn" id="termOpenPanel">宝塔终端</button>
+          <button class="primary-btn" id="termConnect">连接</button>
+          <button class="ghost-btn hidden" id="termDisconnect">断开</button>
+        </div>
+      </div>
+      <article class="glass term-card">
+        <div class="term-bar">
+          <span class="tb-dots"><i></i><i></i><i></i></span>
+          <span id="termTitle">root@server — ssh</span>
+          <div class="term-tools"><button id="termClear">清屏</button><button id="termCopy">复制</button></div>
+        </div>
+        <div class="term-body" id="termBody"></div>
+        <div class="term-empty" id="termEmpty">
+          <div class="te-orb"></div>
+          <h3>打开服务器终端</h3>
+          <p id="termEmptyText">优先使用 SSH；宝塔 API 本身不提供命令执行接口。</p>
+          <div class="te-actions"><button class="primary-btn" id="teConnect">立即连接</button><button class="ghost-btn" id="tePanel">打开宝塔终端</button></div>
+          <small>提示：演示模式下会启动一个模拟 Shell，方便先体验界面。</small>
+        </div>
+      </article>
+    </section>
+
+    <!-- WALLPAPER -->
+    <section class="view" id="view-wallpaper">
+      <div class="view-head"><div><h1>壁纸</h1><p class="sub">液态玻璃的最佳底色 · 同时应用到桌面</p></div><button class="ghost-btn" id="wpOpenFolder">打开壁纸文件夹</button></div>
+      <div class="wp-hero">
+        <article class="glass wp-preview-card">
+          <div class="wp-preview" id="wpPreview"></div>
+          <div class="wp-preview-meta"><span id="wpName">当前壁纸</span><span id="wpDims">—</span></div>
+        </article>
+        <article class="glass wp-control">
+          <h2>显示方式</h2>
+          <div class="chips" id="wpStyleChips">
+            <button data-style="10" class="active">填充</button><button data-style="6">适应</button><button data-style="2">拉伸</button><button data-style="1">平铺</button><button data-style="0">居中</button>
+          </div>
+          <h2>应用</h2>
+          <p class="wp-tip">界面背景与桌面壁纸会同步更换。所有图片都在本地处理，不上传服务器。</p>
+          <button class="primary-btn wide" id="wpApplyBtn">应用当前选择</button>
+          <button class="ghost-btn wide" id="wpPickBtn">从电脑选择图片…</button>
+          <div class="wp-status" id="wpStatus">选择下方任意壁纸开始</div>
+        </article>
+      </div>
+
+      <div class="section-head"><h2>内置液态壁纸</h2><span>程序化生成 · 2K 分辨率</span></div>
+      <div class="preset-grid" id="presetGrid"></div>
+
+      <div class="section-head"><h2>本机图片</h2><span id="galleryCount">—</span></div>
+      <div class="gallery" id="gallery"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <div class="view-head"><div><h1>设置</h1><p class="sub">数据源、连接与外观</p></div><button class="primary-btn" id="saveSettings">保存设置</button></div>
+
+      <div class="settings-grid">
+        <article class="glass pad-card span2">
+          <h2>数据源</h2>
+          <p class="hint">推荐宝塔 API：稳定、无需开放 SSH。终端功能需要 SSH。</p>
+          <div class="mode-grid" id="modeGrid">
+            <button class="mode-card" data-mode="bt">
+              <span class="mode-ic">BT</span><b>宝塔 API</b><small>官方接口 · 推荐</small>
+            </button>
+            <button class="mode-card" data-mode="ssh">
+              <span class="mode-ic">SSH</span><b>SSH</b><small>指标 + 内嵌终端</small>
+            </button>
+            <button class="mode-card" data-mode="demo">
+              <span class="mode-ic">◈</span><b>演示模式</b><small>无需配置 · 开箱即用</small>
+            </button>
+          </div>
+        </article>
+
+        <article class="glass pad-card span2" id="btPanel">
+          <div class="card-head"><div><h2>宝塔 API</h2><p>面板设置 → API 接口 → 获取接口密钥</p></div><span class="cfg-badge" id="btBadge">未配置</span></div>
+          <div class="form-row">
+            <label>面板地址<input id="btUrl" type="text" placeholder="https://panel.example.com:8888" autocomplete="off" spellcheck="false"></label>
+          </div>
+          <div class="form-row two">
+            <label>接口密钥 <code>api_sk</code><input id="btKey" type="password" placeholder="留空则保持不变" autocomplete="off"></label>
+            <label class="check-line"><input id="btSelfSigned" type="checkbox" checked><span>允许自签名证书</span></label>
+          </div>
+          <div class="form-actions"><button class="ghost-btn" id="btTest">测试连接</button><span class="test-result" id="btTestResult"></span></div>
+        </article>
+
+        <article class="glass pad-card span2" id="sshPanel">
+          <div class="card-head"><div><h2>SSH 连接</h2><p>用于服务器终端与备用指标采集</p></div><span class="cfg-badge" id="sshBadge">未配置</span></div>
+          <div class="form-row three">
+            <label>主机<input id="sshHost" type="text" placeholder="192.0.2.10" spellcheck="false"></label>
+            <label>端口<input id="sshPort" type="number" min="1" max="65535" placeholder="22"></label>
+            <label>用户名<input id="sshUser" type="text" placeholder="root" spellcheck="false"></label>
+          </div>
+          <div class="form-row two">
+            <label>密码<input id="sshPass" type="password" placeholder="留空则保持不变" autocomplete="off"></label>
+            <label>私钥路径（可选）<input id="sshKeyPath" type="text" placeholder="C:\Users\Administrator\.ssh\id_rsa" spellcheck="false"></label>
+          </div>
+          <div class="form-actions"><button class="ghost-btn" id="sshTest">测试 SSH</button><span class="test-result" id="sshTestResult"></span></div>
+        </article>
+
+        <article class="glass pad-card span2" id="themePanel">
+          <div class="card-head"><div><h2>主题与外观</h2><p>深色玻璃、浅色晨雾，随心情切换</p></div></div>
+          <div class="theme-grid" id="themeGrid">
+            <button class="theme-card" data-theme="deep" style="--t1:#0b1a2e;--t2:#17375e;--tc:#78d7ff">
+              <span class="theme-preview"><span class="theme-dot"></span></span><b>深空</b><small>默认深色玻璃</small></button>
+            <button class="theme-card" data-theme="violet" style="--t1:#170d2c;--t2:#3a1f63;--tc:#b18cff">
+              <span class="theme-preview"><span class="theme-dot"></span></span><b>紫霭</b><small>梦幻紫调</small></button>
+            <button class="theme-card" data-theme="ocean" style="--t1:#04201d;--t2:#0d4a44;--tc:#4fe3c1">
+              <span class="theme-preview"><span class="theme-dot"></span></span><b>深海</b><small>青碧幽光</small></button>
+            <button class="theme-card" data-theme="ember" style="--t1:#20100a;--t2:#4b2317;--tc:#ffb86b">
+              <span class="theme-preview"><span class="theme-dot"></span></span><b>熔金</b><small>暖橙落日</small></button>
+            <button class="theme-card" data-theme="graphite" style="--t1:#111419;--t2:#242a33;--tc:#cfdaea">
+              <span class="theme-preview"><span class="theme-dot"></span></span><b>石墨</b><small>极简冷灰</small></button>
+            <button class="theme-card" data-theme="dawn" style="--t1:#dfeaf7;--t2:#f6fbff;--tc:#2f8fe0">
+              <span class="theme-preview"><span class="theme-dot"></span></span><b>晨雾</b><small>浅色通透</small></button>
+          </div>
+          <div class="theme-sub">
+            <div>
+              <h2 class="mt">强调色</h2>
+              <div class="accent-row" id="accentRow">
+                <button data-accent="#78d7ff" style="--c:#78d7ff" class="active"></button>
+                <button data-accent="#8f9dff" style="--c:#8f9dff"></button>
+                <button data-accent="#5ef0c0" style="--c:#5ef0c0"></button>
+                <button data-accent="#ff9bc2" style="--c:#ff9bc2"></button>
+                <button data-accent="#ffc46b" style="--c:#ffc46b"></button>
+                <button data-accent="#b18cff" style="--c:#b18cff"></button>
+                <button data-accent="#ff8f7a" style="--c:#ff8f7a"></button>
+                <button data-accent="#9fe870" style="--c:#9fe870"></button>
+                <label class="accent-custom" title="自定义颜色"><input type="color" id="accentCustom" value="#78d7ff"><span>+</span></label>
+              </div>
+            </div>
+            <div>
+              <h2 class="mt">外观选项</h2>
+              <label class="switch-line"><input id="liquidGlass" type="checkbox" checked><span>液态玻璃折射（更通透，占用略高）</span></label>
+              <label class="switch-line"><input id="lowFx" type="checkbox"><span>流畅模式（关闭动效与重模糊，最省资源）</span></label>
+            </div>
+          </div>
+          <h2 class="mt">玻璃质感</h2>
+          <div class="glass-row" id="glassRow">
+            <button data-glass="clear"><span class="gr-demo"></span><b>清透</b><small>更透、折射更强，壁纸透出来</small></button>
+            <button data-glass="std" class="active"><span class="gr-demo"></span><b>均衡</b><small>默认，通透与可读兼顾</small></button>
+            <button data-glass="rich"><span class="gr-demo"></span><b>冰霜</b><small>更厚更磨砂，磨砂质感最重</small></button>
+          </div>
+        </article>
+
+        <article class="glass pad-card span2" id="appPanel">
+          <div class="card-head"><div><h2>应用与窗口</h2><p>名称、启动方式、悬浮窗与关闭行为</p></div></div>
+          <div class="form-row two">
+            <label>应用名称<input id="appName" type="text" maxlength="16" placeholder="星语哨兵" spellcheck="false"></label>
+            <label>悬浮窗尺寸<div class="seg-row" id="widgetSizeSeg"><button data-size="normal" class="active">标准</button><button data-size="mini">迷你</button></div></label>
+          </div>
+          <div class="form-row two">
+            <label>启动时<div class="seg-row" id="startupSeg"><button data-startup="dashboard">主面板</button><button data-startup="widget">只悬浮窗</button><button data-startup="both" class="active">两者</button></div></label>
+            <label>关闭主面板时<div class="seg-row" id="closeActionSeg"><button data-close="tray" class="active">托盘</button><button data-close="quit">退出</button><button data-close="ask">每次问</button></div></label>
+          </div>
+          <label class="switch-line"><input id="showWidget" type="checkbox" checked><span>显示桌面悬浮窗</span></label>
+          <label class="switch-line"><input id="minimizeToTray" type="checkbox" checked><span>最小化按钮收进托盘（不占任务栏）</span></label>
+          <label class="switch-line"><input id="closeNotify" type="checkbox" checked><span>关闭到托盘时弹出提醒</span></label>
+          <div class="form-row two">
+            <label>提醒内容<select id="closeTip">
+              <option value="tray">程序仍在托盘运行，双击图标可重新打开</option>
+              <option value="widget">悬浮窗仍在桌面显示服务器状态</option>
+              <option value="quit">彻底退出请右键托盘图标</option>
+              <option value="custom">自定义…</option>
+            </select></label>
+            <label>自定义提醒<input id="closeTipText" type="text" maxlength="80" placeholder="留空则使用选中文案" spellcheck="false"></label>
+          </div>
+          <label class="switch-line"><input id="closeTipSilent" type="checkbox"><span>不再提醒（等同于「不再询问」）</span></label>
+          <div class="form-actions">
+            <button class="ghost-btn" id="previewTip">预览提醒</button>
+            <button class="ghost-btn" id="quitBtn2">关闭并退出程序</button>
+          </div>
+        </article>
+
+        <article class="glass pad-card">
+          <h2>显示与刷新</h2>
+          <div class="form-row"><label>服务器显示名称<input id="displayName" type="text" placeholder="my-server"></label></div>
+          <div class="form-row two">
+            <label>刷新间隔（秒）<input id="pollSeconds" type="number" min="1" max="30"></label>
+            <label class="check-line"><input id="alwaysOnTop" type="checkbox"><span>悬浮窗始终置顶</span></label>
+          </div>
+          <label class="switch-line"><input id="showIp" type="checkbox" checked><span>显示服务器 IP（标题栏、概览与悬浮窗）</span></label>
+          <label class="switch-line"><input id="showDomain" type="checkbox" checked><span>显示域名（关闭后仅显示 IP）</span></label>
+        </article>
+
+        <article class="glass pad-card">
+          <h2>关于</h2>
+          <div class="about-orb"></div>
+          <p class="about-name">星语哨兵 <b>StarWhisper Sentinel</b></p>
+          <p class="hint">一个专注颜值与实用的服务器监控悬浮窗。数据可来自宝塔 API、SSH 或内置演示。液态玻璃由 CSS 多层折射与模糊合成。</p>
+          <div class="kv"><span>版本</span><b id="aboutVersion">1.2.0</b></div>
+          <div class="kv"><span>Electron</span><b id="aboutElectron">—</b></div>
+          <div class="kv"><span>宝塔文档</span><b><a href="#" id="btDocs">docs.bt.cn/api</a></b></div>
+          <button class="ghost-btn wide mt" id="quitBtn">退出星语哨兵</button>
+        </article>
+      </div>
+      <div class="settings-foot">
+        <span>密钥使用系统 DPAPI（safeStorage）加密保存在本机用户目录。</span>
+        <button class="primary-btn" id="saveSettings2">保存设置</button>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../node_modules/@xterm/xterm/lib/xterm.js"></script>
+<script src="../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+<script src="glass.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
