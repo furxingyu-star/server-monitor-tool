@@ -30,6 +30,7 @@ const DEFAULTS = {
     opacity: 0.96,
     reduceMotion: false,
     appName: '星语哨兵',
+    appSubtitle: 'StarWhisper Sentinel',
     startup: 'both',
     showWidget: true,
     widgetAutostart: true,

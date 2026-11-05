@@ -27,6 +27,8 @@ const SHOT_ACCENT = argValue('accent');
 const SHOT_WALL = argValue('wall');
 const SHOT_RENAME = argValue('rename');
 const SHOT_APPEARANCE = argValue('appearance');
+const SHOT_APPNAME = argValue('appname');
+const SHOT_APPSUB = argValue('appsub');
 const isShot = !!SHOT;
 
 let store, engine, tray = null, widgetWin = null, dashWin = null, isQuitting = false;
@@ -209,6 +211,16 @@ function appTitle() {
   return name || '星语哨兵';
 }
 
+function appSubtitle() {
+  const raw = uiPrefs().appSubtitle;
+  return String(raw === undefined || raw === null ? 'StarWhisper Sentinel' : raw || '').trim();
+}
+
+function trayTip() {
+  const sub = appSubtitle();
+  return sub ? appTitle() + ' · ' + sub : appTitle();
+}
+
 function hostOf(url) {
   try { return new URL(String(url || '')).hostname || ''; } catch { return ''; }
 }
@@ -369,7 +381,7 @@ function buildTray() {
   try { img = nativeImage.createFromPath(iconPath); } catch { img = nativeImage.createEmpty(); }
   if (img.isEmpty()) img = nativeImage.createEmpty();
   tray = new Tray(img);
-  tray.setToolTip(appTitle() + ' · StarWhisper Sentinel');
+  tray.setToolTip(trayTip());
   refreshTrayMenu();
   tray.on('double-click', () => showDashboard());
   tray.on('click', () => showDashboard());
@@ -380,7 +392,7 @@ function refreshTrayMenu() {
   const ui = uiPrefs();
   const size = ui.widgetSize === 'mini' ? 'mini' : 'normal';
   const visible = !!(widgetWin && !widgetWin.isDestroyed() && widgetWin.isVisible());
-  tray.setToolTip(appTitle() + ' · StarWhisper Sentinel');
+  tray.setToolTip(trayTip());
   const menu = Menu.buildFromTemplate([
     { label: '打开主面板', click: () => showDashboard() },
     { label: (visible ? '隐藏悬浮窗' : '显示悬浮窗'), click: () => toggleWidget() },
@@ -456,10 +468,12 @@ function quitApp() {
 
 function applyWindowSettings(prev, next) {
   const title = String(next.appName || '').trim() || '星语哨兵';
-  if (prev.appName !== next.appName || !prev.appName) {
+  const renamed = prev.appName !== next.appName || prev.appSubtitle !== next.appSubtitle || !prev.appName;
+  if (renamed) {
     try { if (dashWin && !dashWin.isDestroyed()) dashWin.setTitle(title); } catch {}
     try { if (widgetWin && !widgetWin.isDestroyed()) widgetWin.setTitle(title); } catch {}
-    try { if (tray) tray.setToolTip(title + ' · StarWhisper Sentinel'); } catch {}
+    const sub = String(next.appSubtitle === undefined || next.appSubtitle === null ? 'StarWhisper Sentinel' : next.appSubtitle || '').trim();
+    try { if (tray) tray.setToolTip(sub ? title + ' · ' + sub : title); } catch {}
   }
   if (prev.showWidget !== next.showWidget) setWidgetVisible(next.showWidget !== false, { silent: true });
   if (prev.widgetSize !== next.widgetSize) setWidgetSize(next.widgetSize, { silent: true });
@@ -665,7 +679,7 @@ async function captureShot() {
 app.whenReady().then(async () => {
   store = new Store();
   // 截图预览用：--theme=pixel --accent=#1a73e8 只在内存里覆盖外观，不写回用户设置。
-  if (isShot && (SHOT_THEME || SHOT_ACCENT || SHOT_WALL || SHOT_APPEARANCE)) {
+  if (isShot && (SHOT_THEME || SHOT_ACCENT || SHOT_WALL || SHOT_APPEARANCE || SHOT_APPNAME || SHOT_APPSUB !== undefined)) {
     const baseLoad = store.load.bind(store);
     store.load = () => {
       const s = baseLoad();
@@ -674,6 +688,8 @@ app.whenReady().then(async () => {
       if (SHOT_ACCENT) s.ui.accent = SHOT_ACCENT;
       if (SHOT_WALL) s.wallpaper = Object.assign({}, s.wallpaper, { path: SHOT_WALL });
       if (SHOT_APPEARANCE) s.ui.appearance = SHOT_APPEARANCE;
+      if (SHOT_APPNAME !== undefined) s.ui.appName = SHOT_APPNAME;
+      if (SHOT_APPSUB !== undefined) s.ui.appSubtitle = SHOT_APPSUB;
       return s;
     };
   }

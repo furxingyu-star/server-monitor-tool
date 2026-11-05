@@ -23,6 +23,7 @@ const state = {
   showDomain: true,
   glass: 'std',
   appName: '星语哨兵',
+  appSubtitle: 'StarWhisper Sentinel',
   startup: 'both',
   showWidget: true,
   widgetAutostart: true,
@@ -390,14 +391,26 @@ function applyDisplay(ui) {
   if (state.snap) render(state.snap);
 }
 
-function applyAppName(name) {
-  const n = String(name || '').trim() || '星语哨兵';
+function applyAppName(name, subtitle) {
+  // 应用名称允许留空：清空后就保持空白，不再自动填回默认名。
+  const n = String(name || '').trim();
+  const shown = n || '星语哨兵'; // 窗口标题 / 托盘等系统位置的回退名
+  const rawSub = (subtitle === undefined || subtitle === null) ? state.appSubtitle : subtitle;
+  const sub = String(rawSub || '').trim();
   state.appName = n;
+  state.appSubtitle = sub;
   const brand = $('brandName');
   if (brand) brand.textContent = n;
-  document.title = n + ' · StarWhisper Sentinel';
+  const brandSub = $('brandSub');
+  if (brandSub) {
+    brandSub.textContent = sub;
+    brandSub.style.display = sub ? '' : 'none';
+  }
+  document.title = sub ? shown + ' · ' + sub : shown;
   const aboutName = el('.about-name');
-  if (aboutName) aboutName.innerHTML = esc(n) + ' <b>StarWhisper Sentinel</b>';
+  if (aboutName) aboutName.innerHTML = sub ? esc(shown) + ' <b>' + esc(sub) + '</b>' : esc(shown);
+  const quitBtn = $('quitBtn');
+  if (quitBtn) quitBtn.textContent = '退出' + shown;
 }
 
 /* ---------- 服务器改名（点主机卡上的铅笔，或双击名字） ---------- */
@@ -1004,7 +1017,7 @@ function ensureTerm() {
     state.term = term;
     state.fit = fit;
     state.termReady = true;
-    term.writeln('\x1b[38;2;160;220;255m星语哨兵终端\x1b[0m  \x1b[38;2;130;160;195mStarWhisper Sentinel Terminal\x1b[0m');
+    term.writeln('\x1b[38;2;160;220;255m' + state.appName + '终端\x1b[0m  \x1b[38;2;130;160;195m' + (state.appSubtitle ? state.appSubtitle + ' Terminal' : 'Terminal') + '\x1b[0m');
     term.writeln('\x1b[38;2;120;150;180m──────────────────────────────────────────────\x1b[0m');
     term.onData(onTermData);
     setTimeout(fitTerm, 80);
@@ -1382,6 +1395,7 @@ function syncAppControls() {
     els('button', row).forEach((b) => b.classList.toggle('active', b.dataset[attr] === value));
   };
   if ($('appName')) $('appName').value = state.appName;
+  if ($('appSubtitle')) $('appSubtitle').value = state.appSubtitle;
   setSeg('widgetSizeSeg', 'size', state.widgetSize);
   setSeg('startupSeg', 'startup', state.startup);
   setSeg('widgetStartSeg', 'wstart', state.widgetAutostart ? 'auto' : 'manual');
@@ -1399,6 +1413,7 @@ function syncAppControls() {
 function collectAppPatch() {
   return {
     appName: state.appName,
+    appSubtitle: state.appSubtitle,
     startup: state.startup,
     showWidget: state.showWidget,
     widgetAutostart: state.widgetAutostart,
@@ -1445,7 +1460,7 @@ function fillSettings(s) {
   applyGlass(s.ui && s.ui.glass);
   applyDisplay(s.ui || {});
   const ui = s.ui || {};
-  applyAppName(ui.appName);
+  applyAppName(ui.appName, ui.appSubtitle);
   state.startup = ui.startup === 'dashboard' || ui.startup === 'widget' ? ui.startup : 'both';
   state.showWidget = ui.showWidget !== false;
   state.widgetAutostart = ui.widgetAutostart !== false;
@@ -1497,7 +1512,8 @@ function collectSettings() {
       showDomain: $('showDomain') ? $('showDomain').checked : state.showDomain,
       alwaysOnTop: $('alwaysOnTop').checked
     }, collectAppPatch(), {
-      appName: $('appName') ? ($('appName').value.trim() || '星语哨兵') : state.appName
+      appName: $('appName') ? $('appName').value.trim() : state.appName,
+      appSubtitle: $('appSubtitle') ? $('appSubtitle').value.trim() : state.appSubtitle
     })
   };
   return patch;
@@ -1611,10 +1627,19 @@ function wireEvents() {
   const an = $('appName');
   if (an) {
     an.addEventListener('input', (e) => { applyAppName(e.target.value); persistApp(); });
-    an.addEventListener('change', (e) => {
-      applyAppName(e.target.value);
-      state.appName = String(e.target.value || '').trim() || '星语哨兵';
-      e.target.value = state.appName;
+    an.addEventListener('change', () => {
+      state.appName = String(an.value || '').trim();
+      applyAppName(state.appName);
+      persistApp();
+    });
+  }
+  const sub = $('appSubtitle');
+  if (sub) {
+    sub.addEventListener('input', (e) => applyAppName(state.appName, e.target.value));
+    sub.addEventListener('change', (e) => {
+      state.appSubtitle = String(e.target.value || '').trim();
+      e.target.value = state.appSubtitle;
+      applyAppName(state.appName, state.appSubtitle);
       persistApp();
     });
   }
@@ -1824,7 +1849,7 @@ async function boot() {
     applyFx(ui);
     applyGlass(ui.glass);
     applyDisplay(ui);
-    if (ui.appName) applyAppName(ui.appName);
+    if (ui.appName || ui.appSubtitle !== undefined) applyAppName(ui.appName, ui.appSubtitle);
     if (ui.accent) applyAccent(ui.accent);
     state.startup = ui.startup || 'both';
     state.showWidget = ui.showWidget !== false;

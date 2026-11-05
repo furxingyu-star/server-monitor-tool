@@ -434,10 +434,13 @@
           <div class="card-head"><div><h2>应用与窗口</h2><p>名称、启动方式、悬浮窗与关闭行为</p></div></div>
           <div class="form-row two">
             <label>应用名称<input id="appName" type="text" maxlength="16" placeholder="星语哨兵" spellcheck="false"></label>
-            <label>悬浮窗尺寸<div class="seg-row" id="widgetSizeSeg"><button data-size="normal" class="active">标准</button><button data-size="mini">迷你</button></div></label>
+            <label>副标题<input id="appSubtitle" type="text" maxlength="28" placeholder="留空则不显示" spellcheck="false"></label>
           </div>
           <div class="form-row two">
+            <label>悬浮窗尺寸<div class="seg-row" id="widgetSizeSeg"><button data-size="normal" class="active">标准</button><button data-size="mini">迷你</button></div></label>
             <label>启动时<div class="seg-row" id="startupSeg"><button data-startup="dashboard">主面板</button><button data-startup="widget">只悬浮窗</button><button data-startup="both" class="active">两者</button></div></label>
+          </div>
+          <div class="form-row">
             <label>小窗启动<div class="seg-row" id="widgetStartSeg"><button data-wstart="auto" class="active">随软件启动</button><button data-wstart="manual">不随软件启动</button></div></label>
           </div>
           <label class="switch-line"><input id="showWidget" type="checkbox" checked><span>显示桌面悬浮窗（立即生效）</span></label>
