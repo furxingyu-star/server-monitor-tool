@@ -33,10 +33,10 @@
     const data = img.data;
     const hw = W / 2, hh = H / 2;
     const rad = Math.min(0.09 * H, hw * 0.5);
-    const band = 0.105 * hh;         // falloff width of the bevelled rim
-    const edge = 0.055 * hh;         // rim peak sits slightly inside the edge
-    const gain = 0.52;               // rim strength (channel units, 0.5 = scale px)
-    const dome = 0.06;               // faint centre magnification, mostly flat interior
+    const band = 0.085 * hh;         // falloff width of the bevelled rim
+    const edge = 0.042 * hh;         // rim peak sits slightly inside the edge
+    const gain = 0.60;               // rim strength (channel units, 0.5 = scale px)
+    const dome = 0.09;               // faint centre magnification, mostly flat interior
     const d = new Float32Array(W * H);
 
     for (let y = 0; y < H; y++) {
@@ -115,7 +115,7 @@
      width/height ratio is closest to the bucket ---- */
   const RATIOS = [0.95, 1.3, 1.65, 2.05, 2.6, 3.6];
   const MAP_H = 176;
-  const PANEL_SCALE = [84, 62, 104];
+  const PANEL_SCALE = [104, 78, 126];
   const LEVEL_SUFFIX = ['', '-c', '-r'];
 
   let ready = false;
@@ -197,8 +197,13 @@
     }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
-  else mount();
+  /* 只为「玻璃玻玻璃」主题生成滤镜：像素主题不加载这套 SDF 位移贴图，省掉启动开销。
+     主题切到 glass 时由 app.js 调用 window.LiquidGlass.mount() 懒加载。 */
+  function autoMount() {
+    if (document.documentElement.getAttribute('data-theme') === 'glass') mount();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', autoMount);
+  else autoMount();
 
   window.LiquidGlass = { mount, buildLensMap };
 })();

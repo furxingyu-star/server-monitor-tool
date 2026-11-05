@@ -153,6 +153,14 @@ function applyWallpaper(url) {
   loadPixelSeed(url);
 }
 
+/* 玻璃主题优先用自选壁纸（和主面板保持一致），像素主题跟随桌面壁纸。 */
+function pickWallpaper() {
+  const ui = (boot && boot.settings && boot.settings.ui) || {};
+  const glass = boot && boot.wallpaper && boot.wallpaper.glass;
+  if (ui.theme === 'glass' && glass) { applyWallpaper(glass.thumb || glass.url); return; }
+  applyWallpaper((boot.wallpaper && boot.wallpaper.thumb) || (boot.wallpaper && boot.wallpaper.url));
+}
+
 function hostFromUrl(url) {
   try { return new URL(String(url || '')).hostname || ''; } catch { return ''; }
 }
@@ -259,17 +267,14 @@ tickClock();
 
 function applyLook(settings) {
   const ui = (settings && settings.ui) || {};
-  document.documentElement.setAttribute('data-theme', ui.theme || 'deep');
-  document.documentElement.setAttribute('data-appearance', resolvedDark() ? 'dark' : 'light');
+  const glass = ui.theme === 'glass';
+  if (window.CatSpeak) window.CatSpeak.setEnabled(ui.language === 'cat');
+  document.documentElement.setAttribute('data-theme', glass ? 'glass' : 'pixel');
+  document.documentElement.setAttribute('data-appearance', glass || resolvedDark() ? 'dark' : 'light');
   if (ui.accent) document.documentElement.style.setProperty('--accent', ui.accent);
   applyPixelTheme();
-  const liquid = ui.liquid !== false;
-  document.documentElement.setAttribute('data-liquid', liquid ? '1' : '0');
-  document.documentElement.setAttribute('data-fx', ui.lowFx ? 'low' : '');
-  document.documentElement.setAttribute('data-glass', ['clear','std','rich'].indexOf(ui.glass) >= 0 ? ui.glass : 'std');
   const size = ui.widgetSize === 'mini' ? 'mini' : 'normal';
   document.documentElement.setAttribute('data-size', size);
-  document.body.classList.toggle('low-fx', !!ui.lowFx);
   const appName = String(ui.appName || '').trim() || '星语哨兵';
   const brand = $('wBrand');
   if (brand) brand.textContent = appName;
@@ -285,6 +290,7 @@ async function init() {
     const prev = boot.settings || {};
     boot.settings = Object.assign({}, prev, s, { ui: Object.assign({}, prev.ui || {}, s.ui || {}) });
     applyLook(boot.settings);
+    pickWallpaper();
     if (latest) render(latest);
   });
   SYSTEM_DARK.addEventListener('change', () => {
@@ -293,13 +299,12 @@ async function init() {
     applyLook(boot.settings);
     if (latest) render(latest);
   });
-  applyWallpaper((boot.wallpaper && boot.wallpaper.thumb) || (boot.wallpaper && boot.wallpaper.url));
+  pickWallpaper();
   pinned = !!(boot.settings && boot.settings.ui && boot.settings.ui.alwaysOnTop !== false);
   updatePin();
   const stats = await window.sentinel.getStats();
   if (stats) render(stats);
   window.sentinel.onStats(render);
-  window.sentinel.onWallpaper((w) => applyWallpaper(w.thumb || w.url));
 }
 
 function updatePin() {

@@ -1,7 +1,7 @@
 # Zip the packaged app for a GitHub Release asset.
 param(
   [string]$Dist = "dist\StarSentinel-win32-x64",
-  [string]$Out  = "star-sentinel-v1.4.0-win32-x64.zip"
+  [string]$Out  = "star-sentinel-v1.7.0-win32-x64.zip"
 )
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression.FileSystem

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="pixel">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' file: data:; font-src 'self' file:; style-src 'self' 'unsafe-inline'; script-src 'self';">
@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="../node_modules/@xterm/xterm/css/xterm.css">
 <link rel="stylesheet" href="app.css">
 <link rel="stylesheet" href="pixel-theme.css">
+<link rel="stylesheet" href="glass-theme.css">
 </head>
 <body>
 <div class="shell" id="shell">
@@ -43,7 +44,8 @@
 
   <aside class="sidebar">
     <div class="side-label">导航</div>
-    <nav class="nav">
+    <nav class="nav" id="navRail">
+      <span class="nav-pill" aria-hidden="true"></span>
       <button class="nav-item active" data-view="overview">
         <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>
         <span>概览</span>
@@ -64,10 +66,6 @@
         <svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M7 9.5l3 2.6-3 2.6M12.5 15h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span>终端</span>
       </button>
-      <button class="nav-item" data-view="wallpaper">
-        <svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M4.5 17l5-5 4 4 2.5-2.5 3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>壁纸</span>
-      </button>
       <button class="nav-item" data-view="settings">
         <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg>
         <span>设置</span>
@@ -82,7 +80,7 @@
       <button class="ss-refresh" id="ssRefresh">立即刷新</button>
     </div>
     <div class="side-foot">
-      <span>v1.4.0</span><span>·</span><span id="footTheme">液态玻璃</span>
+      <span>v1.7.0</span><span>·</span><span id="footTheme">像素 · Material You</span>
     </div>
   </aside>
 
@@ -212,7 +210,6 @@
           <div class="card-head"><div><h2>快捷操作</h2><p>常用维护入口</p></div></div>
           <div class="quick-grid">
             <button class="quick" id="qTerminal"><span class="qi">⌘</span><b>服务器终端</b><small>SSH / 演示</small></button>
-            <button class="quick" id="qWallpaper"><span class="qi">◐</span><b>更换壁纸</b><small>内置渐变 / 本地</small></button>
             <button class="quick" id="qRefresh"><span class="qi">↻</span><b>立即刷新</b><small>拉取最新指标</small></button>
             <button class="quick" id="qPanel"><span class="qi">↗</span><b>宝塔面板</b><small>浏览器打开</small></button>
           </div>
@@ -303,34 +300,6 @@
       </article>
     </section>
 
-    <!-- WALLPAPER -->
-    <section class="view" id="view-wallpaper">
-      <div class="view-head"><div><h1>壁纸</h1><p class="sub">液态玻璃的最佳底色 · 同时应用到桌面</p></div><button class="ghost-btn" id="wpOpenFolder">打开壁纸文件夹</button></div>
-      <div class="wp-hero">
-        <article class="glass wp-preview-card">
-          <div class="wp-preview" id="wpPreview"></div>
-          <div class="wp-preview-meta"><span id="wpName">当前壁纸</span><span id="wpDims">—</span></div>
-        </article>
-        <article class="glass wp-control">
-          <h2>显示方式</h2>
-          <div class="chips" id="wpStyleChips">
-            <button data-style="10" class="active">填充</button><button data-style="6">适应</button><button data-style="2">拉伸</button><button data-style="1">平铺</button><button data-style="0">居中</button>
-          </div>
-          <h2>应用</h2>
-          <p class="wp-tip">界面背景与桌面壁纸会同步更换。所有图片都在本地处理，不上传服务器。</p>
-          <button class="primary-btn wide" id="wpApplyBtn">应用当前选择</button>
-          <button class="ghost-btn wide" id="wpPickBtn">从电脑选择图片…</button>
-          <div class="wp-status" id="wpStatus">选择下方任意壁纸开始</div>
-        </article>
-      </div>
-
-      <div class="section-head"><h2>内置液态壁纸</h2><span>程序化生成 · 2K 分辨率</span></div>
-      <div class="preset-grid" id="presetGrid"></div>
-
-      <div class="section-head"><h2>本机图片</h2><span id="galleryCount">—</span></div>
-      <div class="gallery" id="gallery"></div>
-    </section>
-
     <!-- SETTINGS -->
     <section class="view" id="view-settings">
       <div class="view-head"><div><h1>设置</h1><p class="sub">数据源、连接与外观</p></div><button class="primary-btn" id="saveSettings">保存设置</button></div>
@@ -379,29 +348,21 @@
         </article>
 
         <article class="glass pad-card span2" id="themePanel">
-          <div class="card-head"><div><h2>主题与外观</h2><p>深色玻璃、浅色晨雾、Material You，随心情切换，跟随系统明暗</p></div></div>
-          <div class="theme-grid" id="themeGrid">
-            <button class="theme-card" data-theme="deep" style="--t1:#0b1a2e;--t2:#17375e;--tc:#78d7ff">
-              <span class="theme-preview"><span class="theme-dot"></span></span><b>深空</b><small>默认深色玻璃</small></button>
-            <button class="theme-card" data-theme="violet" style="--t1:#170d2c;--t2:#3a1f63;--tc:#b18cff">
-              <span class="theme-preview"><span class="theme-dot"></span></span><b>紫霭</b><small>梦幻紫调</small></button>
-            <button class="theme-card" data-theme="ocean" style="--t1:#04201d;--t2:#0d4a44;--tc:#4fe3c1">
-              <span class="theme-preview"><span class="theme-dot"></span></span><b>深海</b><small>青碧幽光</small></button>
-            <button class="theme-card" data-theme="ember" style="--t1:#20100a;--t2:#4b2317;--tc:#ffb86b">
-              <span class="theme-preview"><span class="theme-dot"></span></span><b>熔金</b><small>暖橙落日</small></button>
-            <button class="theme-card" data-theme="graphite" style="--t1:#111419;--t2:#242a33;--tc:#cfdaea">
-              <span class="theme-preview"><span class="theme-dot"></span></span><b>石墨</b><small>极简冷灰</small></button>
-            <button class="theme-card" data-theme="pixel" style="--t1:#e8f0fe;--t2:#ffffff;--tc:#1a73e8">
-              <span class="theme-preview"><span class="theme-dot"></span></span><b>像素</b><small>Pixel · Material You</small></button>
-            <button class="theme-card" data-theme="dawn" style="--t1:#dfeaf7;--t2:#f6fbff;--tc:#2f8fe0">
-              <span class="theme-preview"><span class="theme-dot"></span></span><b>晨雾</b><small>浅色通透</small></button>
-          </div>
+          <div class="card-head"><div><h2>主题与外观</h2><p>像素 Material You 与 玻璃玻玻璃 液态玻璃两套主题；像素跟随 Windows 明暗与壁纸取色，玻璃玻玻璃固定深色</p></div></div>
           <div class="theme-sub">
+            <div>
+              <h2 class="mt">主题</h2>
+              <div class="theme-grid" id="themeGrid">
+                <button class="theme-card active" data-theme="pixel" style="--t1:#e8f0fe;--t2:#ffffff;--tc:#1a73e8">
+                  <span class="theme-preview"><span class="theme-dot"></span></span><b>像素</b><small>Pixel · Material You</small></button>
+                <button class="theme-card" data-theme="glass" style="--t1:#16283d;--t2:#0a1524;--tc:#7cc4ff">
+                  <span class="theme-preview"><span class="theme-dot"></span></span><b>玻璃玻玻璃</b><small>Liquid Glass · Backdrop</small></button>
+              </div>
+            </div>
             <div>
               <h2 class="mt">强调色</h2>
               <div class="accent-row" id="accentRow">
-                <button data-accent="#78d7ff" style="--c:#78d7ff" class="active"></button>
-                <button data-accent="#1a73e8" style="--c:#1a73e8"></button>
+                <button data-accent="#1a73e8" style="--c:#1a73e8" class="active"></button>
                 <button data-accent="#8f9dff" style="--c:#8f9dff"></button>
                 <button data-accent="#5ef0c0" style="--c:#5ef0c0"></button>
                 <button data-accent="#ff9bc2" style="--c:#ff9bc2"></button>
@@ -409,7 +370,7 @@
                 <button data-accent="#b18cff" style="--c:#b18cff"></button>
                 <button data-accent="#ff8f7a" style="--c:#ff8f7a"></button>
                 <button data-accent="#9fe870" style="--c:#9fe870"></button>
-                <label class="accent-custom" title="自定义颜色"><input type="color" id="accentCustom" value="#78d7ff"><span>+</span></label>
+                <label class="accent-custom" title="自定义颜色"><input type="color" id="accentCustom" value="#1a73e8"><span>+</span></label>
               </div>
             </div>
             <div>
@@ -419,19 +380,29 @@
                 <button data-appearance="light">浅色</button>
                 <button data-appearance="dark">深色</button>
               </div>
-              <div class="fx-hint" id="appearanceHint">按 Windows 深色设置自动切换；浅色/深色用于决定像素、晨雾这类浅色主题的明暗皮肤。</div>
-              <h2 class="mt">外观选项</h2>
-              <label class="switch-line"><input id="liquidGlass" type="checkbox" checked><span>液态玻璃折射（更通透，占用略高）</span></label>
-              <label class="switch-line"><input id="lowFx" type="checkbox"><span>流畅模式（关闭动效与重模糊，最省资源）</span></label>
+              <div class="fx-hint" id="appearanceHint">按 Windows 深色设置自动切换；浅色/深色决定像素皮肤的明暗。</div>
             </div>
           </div>
-          <h2 class="mt">玻璃质感</h2>
-          <div class="glass-row" id="glassRow">
-            <button data-glass="clear"><span class="gr-demo"></span><b>清透</b><small>更透、折射更强，壁纸透出来</small></button>
-            <button data-glass="std" class="active"><span class="gr-demo"></span><b>均衡</b><small>默认，通透与可读兼顾</small></button>
-            <button data-glass="rich"><span class="gr-demo"></span><b>冰霜</b><small>更厚更磨砂，磨砂质感最重</small></button>
+          <div class="glass-wp lang-row" id="langRow" data-cat-skip>
+            <button class="lang-head" id="langToggle" type="button" aria-expanded="false">
+              <span class="glw-info"><b>语言</b><span id="langHint">简体中文</span></span>
+              <span class="lang-chev" aria-hidden="true">▾</span>
+            </button>
+            <div class="lang-body" id="langBody" hidden>
+              <div class="seg-row" id="langSeg">
+                <button data-lang="zh" class="active">简体中文</button>
+                <button data-lang="cat">中文猫猫语 🐱</button>
+              </div>
+            </div>
           </div>
-          <div class="fx-hint" id="fxHint"></div>
+          <div class="glass-wp" id="glassWp" hidden>
+            <span class="glw-thumb empty" id="glassWpThumb" aria-hidden="true"></span>
+            <span class="glw-info"><b>玻璃壁纸</b><span id="glassWpName">跟随桌面壁纸 · 选一张有细节的图片，玻璃折射会更明显</span></span>
+            <span class="glw-actions">
+              <button class="ghost-btn" id="glassWpPick">选择图片</button>
+              <button class="ghost-btn" id="glassWpReset" disabled>跟随桌面</button>
+            </span>
+          </div>
         </article>
 
         <article class="glass pad-card span2" id="appPanel">
@@ -448,7 +419,6 @@
             <label>小窗启动<div class="seg-row" id="widgetStartSeg"><button data-wstart="auto" class="active">随软件启动</button><button data-wstart="manual">不随软件启动</button></div></label>
           </div>
           <label class="switch-line"><input id="showWidget" type="checkbox" checked><span>显示桌面悬浮窗（立即生效）</span></label>
-          <label class="switch-line"><input id="minimizeToTray" type="checkbox" checked><span>最小化按钮收进托盘（不占任务栏）</span></label>
           <div class="close-block">
             <p class="close-title">关闭主界面时：</p>
             <label class="radio-line"><input type="radio" name="closeAction" value="tray" checked><span>最小化到系统托盘</span></label>
@@ -487,7 +457,7 @@
           <div class="about-orb"></div>
           <p class="about-name">星语哨兵 <b>StarWhisper Sentinel</b></p>
           <p class="hint">一个专注颜值与实用的服务器监控悬浮窗。数据可来自宝塔 API、SSH 或内置演示。液态玻璃由 CSS 多层折射与模糊合成。</p>
-          <div class="kv"><span>版本</span><b id="aboutVersion">1.4.0</b></div>
+          <div class="kv"><span>版本</span><b id="aboutVersion">1.7.0</b></div>
           <div class="kv"><span>Electron</span><b id="aboutElectron">—</b></div>
           <div class="kv"><span>设置加密</span><b id="aboutStorage">—</b></div>
           <div class="kv"><span>宝塔文档</span><b><a href="#" id="btDocs">docs.bt.cn/api</a></b></div>
@@ -505,6 +475,7 @@
 <script src="../node_modules/@xterm/xterm/lib/xterm.js"></script>
 <script src="../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
 <script src="glass.js"></script>
+<script src="cat-speak.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

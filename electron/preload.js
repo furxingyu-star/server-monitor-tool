@@ -32,10 +32,8 @@ contextBridge.exposeInMainWorld('sentinel', {
   },
   wallpaper: {
     get: () => ipcRenderer.invoke('wallpaper:get'),
-    list: () => ipcRenderer.invoke('wallpaper:list'),
-    pick: () => ipcRenderer.invoke('wallpaper:pick'),
-    apply: (payload) => ipcRenderer.invoke('wallpaper:apply', payload),
-    openFolder: () => ipcRenderer.invoke('wallpaper:open-folder')
+    pickGlass: () => ipcRenderer.invoke('wallpaper:pick-glass'),
+    clearGlass: () => ipcRenderer.invoke('wallpaper:clear-glass')
   },
   terminal: {
     connect: (opts) => ipcRenderer.invoke('terminal:connect', opts || {}),
@@ -45,7 +43,6 @@ contextBridge.exposeInMainWorld('sentinel', {
     info: () => ipcRenderer.invoke('terminal:info')
   },
   onStats: (cb) => on('stats', cb),
-  onWallpaper: (cb) => on('wallpaper:changed', cb),
   onTerminalData: (cb) => on('terminal:data', cb),
   onTerminalStatus: (cb) => on('terminal:status', cb),
   onNavigate: (cb) => on('navigate', cb),

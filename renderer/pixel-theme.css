@@ -1,4 +1,4 @@
-/* 主题卡缩略图：这张卡在任何主题下都要能看清，所以不挂 data-theme 作用域 */
+/* 主题卡缩略图：像素卡的缩略图始终是浅色 Material 外观 */
 .theme-card[data-theme="pixel"] .theme-preview {
   background: linear-gradient(150deg, #e8f0fe, #ffffff);
   border-color: rgba(26,115,232,.20);
@@ -12,8 +12,7 @@
 /* ============================================================================
    Pixel UI —— 独立的 Material You 主题
    ----------------------------------------------------------------------------
-   与 app.css 中 deep / violet / ocean / ember / graphite / dawn 完全隔离：
-   每一条规则都挂在 html[data-theme="pixel"] 下，切回其他主题不会留下任何痕迹。
+   像素是应用唯一的主题：app.css 只留基础骨架，所有皮肤规则都挂在这里。
    --p-* 是 Material 3 的动态色角色，app.js 的 applyPixelPalette() 会按壁纸取色
    实时改写；下面是取不到壁纸时的 Pixel 蓝默认值。
    ========================================================================== */
@@ -158,10 +157,43 @@ html[data-theme="pixel"] .nav-item {
 html[data-theme="pixel"] .nav-item svg { width: 20px; height: 20px; stroke-width: 1.8; opacity: 1; }
 html[data-theme="pixel"] .nav-item:hover { background: rgba(0,0,0,.05); color: var(--p-on-surface); }
 html[data-theme="pixel"] .nav-item.active {
-  background: var(--p-primary-container); color: var(--p-on-primary-container);
+  background: transparent; color: var(--p-on-primary-container);
   border: 0; box-shadow: none;
 }
 html[data-theme="pixel"] .nav-item.active::before { display: none; }
+/* ---------- 侧边导航动画（滑动指示胶囊 + 悬停/入场动画） ---------- */
+html[data-theme="pixel"] .nav { position: relative; }
+html[data-theme="pixel"] .nav-pill {
+  position: absolute; left: 0; right: 0; top: 0; height: 48px; border-radius: 999px;
+  background: color-mix(in srgb, var(--p-primary) 12%, var(--p-surface-1));
+  opacity: 0; pointer-events: none; z-index: 0;
+  transition: transform .42s cubic-bezier(.22,1,.36,1), height .26s cubic-bezier(.22,1,.36,1), background .25s ease, opacity .22s ease;
+}
+html[data-theme="pixel"] .nav-pill.ready { opacity: 1; }
+html[data-theme="pixel"][data-appearance="dark"] .nav-pill { background: color-mix(in srgb, var(--p-primary) 20%, var(--p-surface-1)); }
+html[data-theme="pixel"] .nav-item { position: relative; z-index: 1; }
+html[data-theme="pixel"] .nav-item svg { transition: transform .32s cubic-bezier(.22,1,.36,1), color .2s ease; }
+html[data-theme="pixel"] .nav-item span { transition: transform .32s cubic-bezier(.22,1,.36,1); }
+html[data-theme="pixel"] .nav-item:hover svg { transform: scale(1.14); }
+html[data-theme="pixel"] .nav-item:hover span { transform: translateX(2px); }
+html[data-theme="pixel"] .nav-item.active svg { transform: scale(1.04); }
+html[data-theme="pixel"] .nav-item.active:hover { background: transparent; }
+html[data-theme="pixel"] .nav-item:active { transform: scale(.985); }
+@keyframes navIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+html[data-theme="pixel"] body.nav-ready .nav-item { animation: navIn .44s cubic-bezier(.22,1,.36,1) backwards; }
+html[data-theme="pixel"] body.nav-ready .nav-item:nth-of-type(1) { animation-delay: .02s; }
+html[data-theme="pixel"] body.nav-ready .nav-item:nth-of-type(2) { animation-delay: .06s; }
+html[data-theme="pixel"] body.nav-ready .nav-item:nth-of-type(3) { animation-delay: .10s; }
+html[data-theme="pixel"] body.nav-ready .nav-item:nth-of-type(4) { animation-delay: .14s; }
+html[data-theme="pixel"] body.nav-ready .nav-item:nth-of-type(5) { animation-delay: .18s; }
+html[data-theme="pixel"] body.nav-ready .nav-item:nth-of-type(6) { animation-delay: .22s; }
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="pixel"] .nav-pill { transition: none; }
+  html[data-theme="pixel"] body.nav-ready .nav-item { animation: none; }
+  html[data-theme="pixel"] .nav-item:hover svg,
+  html[data-theme="pixel"] .nav-item:hover span { transform: none; }
+}
+
 html[data-theme="pixel"] .side-status {
   border-radius: var(--px-r-lg); padding: 16px; margin: 12px 2px 10px;
   background: var(--p-surface-1); border: 0 !important;
@@ -216,10 +248,7 @@ html[data-theme="pixel"] .eyebrow {
 html[data-theme="pixel"] .head-actions { gap: 10px; }
 
 /* ---------- 卡片：M3 filled card ---------- */
-html[data-theme="pixel"] .glass,
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .glass,
-html[data-lg="1"][data-liquid="1"][data-glass="clear"][data-theme="pixel"] .glass,
-html[data-lg="1"][data-liquid="1"][data-glass="rich"][data-theme="pixel"] .glass {
+html[data-theme="pixel"] .glass {
   border-radius: var(--px-r-xl);
   border: 0;
   background: var(--p-surface-1);
@@ -228,9 +257,7 @@ html[data-lg="1"][data-liquid="1"][data-glass="rich"][data-theme="pixel"] .glass
   -webkit-backdrop-filter: none;
 }
 html[data-theme="pixel"] .glass::before,
-html[data-theme="pixel"] .glass::after,
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .glass::before,
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .glass::after { display: none !important; }
+html[data-theme="pixel"] .glass::after { display: none !important; }
 
 /* ---------- 按钮：M3 filled / tonal / text ---------- */
 html[data-theme="pixel"] .primary-btn {
@@ -263,10 +290,7 @@ html[data-theme="pixel"] .mini-btn:hover {
 }
 
 /* ---------- 概览 · 主机卡 ---------- */
-html[data-theme="pixel"] .hero-card,
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .hero-card,
-html[data-lg="1"][data-liquid="1"][data-glass="clear"][data-theme="pixel"] .hero-card,
-html[data-lg="1"][data-liquid="1"][data-glass="rich"][data-theme="pixel"] .hero-card {
+html[data-theme="pixel"] .hero-card {
   padding: 18px 22px 16px; min-height: 0;
   background: linear-gradient(140deg,
     color-mix(in srgb, var(--p-primary) 10%, var(--p-surface-1)),
@@ -364,7 +388,13 @@ html[data-theme="pixel"] .seg button {
   color: var(--p-on-surface-variant); font-size: 12.5px; font-weight: 500;
 }
 html[data-theme="pixel"] .seg button.active {
-  background: var(--p-surface-1); color: var(--p-primary); box-shadow: var(--px-elev-1);
+  background: transparent; color: var(--p-primary); box-shadow: none;
+}
+html[data-theme="pixel"] .seg-ind {
+  border-radius: 999px; background: var(--p-surface-1); box-shadow: var(--px-elev-1);
+}
+html[data-theme="pixel"] .seg-row .seg-ind {
+  border-radius: 999px; background: var(--p-primary-container); border-color: transparent; box-shadow: none;
 }
 html[data-theme="pixel"] .chart-wrap { margin-top: 10px; }
 html[data-theme="pixel"] .chart-legend {
@@ -436,17 +466,6 @@ html[data-theme="pixel"] .qi {
 }
 html[data-theme="pixel"] .quick b { font-size: 12.5px; font-weight: 500; color: var(--p-on-surface); }
 html[data-theme="pixel"] .quick small { font-size: 10.5px; color: var(--p-on-surface-muted); }
-
-/* 液体玻璃的镜面高光 / 指针光在 Pixel 下全部关闭 */
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .quick,
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .np,
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .mini,
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .mode-card {
-  backdrop-filter: none !important;
-}
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .quick::before,
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .mode-card::before,
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .theme-card::before { display: none !important; }
 
 /* ---------- 性能 ---------- */
 html[data-theme="pixel"] .perf-top { padding: 22px 24px 16px; }
@@ -552,38 +571,6 @@ html[data-theme="pixel"] .term-empty p { color: rgba(255,255,255,.66); font-size
 html[data-theme="pixel"] .term-empty small { color: rgba(255,255,255,.42); font-size: 11px; }
 html[data-theme="pixel"] .term-empty .ghost-btn { background: rgba(255,255,255,.10); color: #e8eaed; }
 html[data-theme="pixel"] .term-empty .ghost-btn:hover { background: rgba(255,255,255,.18); }
-
-/* ---------- 壁纸 ---------- */
-html[data-theme="pixel"] .wp-preview-card { padding: 12px; }
-html[data-theme="pixel"] .wp-preview { height: 280px; border-radius: 22px; border: 0; }
-html[data-theme="pixel"] .wp-preview-meta {
-  padding: 12px 6px 4px; font-size: 11.5px; color: var(--p-on-surface-muted);
-}
-html[data-theme="pixel"] .wp-control { padding: 22px; }
-html[data-theme="pixel"] .wp-control h2 { font-size: 16px; font-weight: 500; color: var(--p-on-surface); }
-html[data-theme="pixel"] .chips { gap: 8px; }
-html[data-theme="pixel"] .chips button {
-  height: 34px; padding: 0 16px; border-radius: 999px;
-  border: 1px solid var(--p-outline); background: transparent;
-  color: var(--p-on-surface-variant); font-size: 12.5px; font-weight: 500;
-}
-html[data-theme="pixel"] .chips button:hover { background: rgba(0,0,0,.04); }
-html[data-theme="pixel"] .chips button.active {
-  border-color: transparent; background: var(--p-primary-container);
-  color: var(--p-on-primary-container); box-shadow: none;
-}
-html[data-theme="pixel"] .wp-tip,
-html[data-theme="pixel"] .wp-status { font-size: 11px; color: var(--p-on-surface-muted); }
-html[data-theme="pixel"] .section-head { margin: 26px 0 12px; }
-html[data-theme="pixel"] .section-head h2 { font-size: 17px; font-weight: 500; color: var(--p-on-surface); }
-html[data-theme="pixel"] .section-head span { font-size: 11px; color: var(--p-on-surface-muted); }
-html[data-theme="pixel"] .preset { border-radius: 22px; border: 0; }
-html[data-theme="pixel"] .preset:hover { border: 0; box-shadow: var(--px-elev-2); }
-html[data-theme="pixel"] .preset.selected {
-  border: 0; box-shadow: none; outline: 3px solid var(--p-primary); outline-offset: 2px;
-}
-html[data-theme="pixel"] .gal-item { border-radius: 20px; border: 0; background: var(--p-surface-2); }
-html[data-theme="pixel"] .gal-item.selected { border: 0; box-shadow: none; outline: 3px solid var(--p-primary); outline-offset: 2px; }
 
 /* ---------- 设置 ---------- */
 html[data-theme="pixel"] .settings-grid { gap: 14px; }
@@ -723,34 +710,13 @@ html[data-theme="pixel"] .accent-custom {
   border: 1px dashed var(--p-outline); color: var(--p-on-surface-muted);
 }
 
-html[data-theme="pixel"] .glass-row { gap: 10px; margin-top: 12px; }
-html[data-theme="pixel"] .glass-row button {
-  padding: 12px 14px; border-radius: 18px;
-  border: 1px solid var(--p-outline-variant); background: var(--p-surface-1);
-}
-html[data-theme="pixel"] .glass-row button:hover { border-color: var(--p-outline); transform: none; }
-html[data-theme="pixel"] .glass-row button.active {
-  border-color: transparent; background: var(--p-primary-container); box-shadow: none;
-}
-html[data-theme="pixel"] .glass-row b { font-size: 12.5px; font-weight: 500; color: var(--p-on-surface); }
-html[data-theme="pixel"] .glass-row small { font-size: 10.5px; color: var(--p-on-surface-muted); }
-html[data-theme="pixel"] .gr-demo {
-  height: 24px; margin-bottom: 6px; border-radius: 999px; border: 0;
-  background: linear-gradient(135deg, #e8f0fe, #ffffff 55%, #dbe6f7);
-}
-html[data-theme="pixel"] .glass-row button[data-glass="clear"] .gr-demo {
-  background: linear-gradient(135deg, #f1f4f9, #ffffff 55%, #e6ebf2); border-style: solid;
-}
-html[data-theme="pixel"] .glass-row button[data-glass="rich"] .gr-demo {
-  background: linear-gradient(135deg, #d6e3fb, #ffffff 50%, #cfdcf5);
-}
 html[data-theme="pixel"] .seg-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
 html[data-theme="pixel"] .seg-row button {
   height: 44px; border-radius: 999px; border: 1px solid var(--p-outline-variant);
   background: transparent; color: var(--p-on-surface-variant); font-size: 12.5px; font-weight: 500;
 }
 html[data-theme="pixel"] .seg-row button.active {
-  border-color: transparent; background: var(--p-primary-container); color: var(--p-on-primary-container);
+  border-color: transparent; background: transparent; color: var(--p-on-primary-container);
 }
 
 html[data-theme="pixel"] .settings-foot {
@@ -823,7 +789,6 @@ html[data-theme="pixel"][data-appearance="dark"] {
 html[data-theme="pixel"][data-appearance="dark"] .tb-btn:hover { background: rgba(255,255,255,.08); }
 html[data-theme="pixel"][data-appearance="dark"] .tb-btn.close:hover { background: rgba(242,139,130,.18); color: #f28b82; }
 html[data-theme="pixel"][data-appearance="dark"] .nav-item:hover { background: rgba(255,255,255,.07); }
-html[data-theme="pixel"][data-appearance="dark"] .chips button:hover { background: rgba(255,255,255,.06); }
 html[data-theme="pixel"][data-appearance="dark"] .ss-refresh:hover,
 html[data-theme="pixel"][data-appearance="dark"] .ghost-btn:hover {
   background: color-mix(in srgb, var(--p-primary) 22%, var(--p-surface-1));
@@ -899,16 +864,13 @@ html[data-theme="pixel"] .ss-refresh:hover { background: rgba(0,0,0,.05); color:
 
 /* 3. 导航选中态：回到主色系，弱化紫调 */
 html[data-theme="pixel"] .nav-item.active {
-  background: color-mix(in srgb, var(--p-primary) 12%, var(--p-surface-1));
+  background: transparent;
   color: var(--p-primary);
 }
 html[data-theme="pixel"] .nav-item.active svg { color: var(--p-primary); }
 
 /* 4. 内边距统一：主机卡 / 指标卡 / 网络卡同一边距 */
-html[data-theme="pixel"] .hero-card,
-html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .hero-card,
-html[data-lg="1"][data-liquid="1"][data-glass="clear"][data-theme="pixel"] .hero-card,
-html[data-lg="1"][data-liquid="1"][data-glass="rich"][data-theme="pixel"] .hero-card { padding: 22px; }
+html[data-theme="pixel"] .hero-card { padding: 22px; }
 html[data-theme="pixel"] .metric-card { padding: 22px; }
 html[data-theme="pixel"] .net-card { padding: 22px 22px 18px; }
 
@@ -967,7 +929,7 @@ html[data-theme="pixel"] .np small {
 /* ---------- 深色外观下的打磨覆盖 ---------- */
 html[data-theme="pixel"][data-appearance="dark"] .tb-clock { color: var(--p-on-surface); }
 html[data-theme="pixel"][data-appearance="dark"] .nav-item.active {
-  background: color-mix(in srgb, var(--p-primary) 20%, var(--p-surface-1)); color: #d3e3fd;
+  background: transparent; color: #d3e3fd;
 }
 html[data-theme="pixel"][data-appearance="dark"] .nav-item.active svg { color: #d3e3fd; }
 html[data-theme="pixel"][data-appearance="dark"] .ss-refresh:hover { background: rgba(255,255,255,.07); }

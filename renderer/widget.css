@@ -85,34 +85,11 @@ html, body { width: 100%; height: 100%; margin: 0; background: transparent; over
 
 
 /* ---------- theme accents ---------- */
-:root { --accent: #78d7ff; }
-html[data-theme="violet"] { --accent: #b18cff; }
-html[data-theme="ocean"] { --accent: #4fe3c1; }
-html[data-theme="ember"] { --accent: #ffb86b; }
-html[data-theme="graphite"] { --accent: #cfdaea; }
-html[data-theme="dawn"][data-appearance="light"] { --accent: #2f8fe0; }
+:root { --accent: #1a73e8; }
 html[data-theme="pixel"] { --accent: var(--p-primary, #1a73e8); }
 
-/* ---------- liquid glass ---------- */
-.lg-defs { position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none; }
+/* ---------- layout layers ---------- */
 .main-area, .w-foot { position: relative; z-index: 2; }
-html[data-lg="1"][data-liquid="1"] .widget::after {
-  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
-  backdrop-filter: blur(1.7px) saturate(140%) brightness(1.02);
-  background: linear-gradient(160deg, rgba(255,255,255,.06), transparent 45%);
-}
-html[data-lg="1"][data-liquid="1"][data-glass="clear"] .widget::after {
-  backdrop-filter: blur(0.9px) saturate(130%);
-  background: linear-gradient(160deg, rgba(255,255,255,.035), transparent 45%);
-}
-html[data-lg="1"][data-liquid="1"][data-glass="rich"] .widget::after {
-  backdrop-filter: blur(4.5px) saturate(155%);
-  background: linear-gradient(160deg, rgba(255,255,255,.10), transparent 50%);
-}
-html[data-fx="low"] .glow, html[data-fx="low"] .sheen, html[data-fx="low"] .noise { display: none !important; }
-html[data-fx="low"] .widget::after { backdrop-filter: none !important; filter: none !important; }
-html[data-fx="low"] .wallpaper { transform: none; }
-body.low-fx * { animation-duration: .001s !important; }
 
 /* ---------- corner clipping (avoid square corners on bright wallpapers) ---------- */
 html, body { background: transparent !important; }
@@ -229,7 +206,6 @@ html[data-size="mini"][data-theme="pixel"] .w-foot { height: 24px; padding: 0 14
 html[data-size="mini"][data-theme="pixel"] .icon-btn { width: 24px; height: 24px; }
 
 /* ---------- Pixel UI 深色外观（悬浮窗） ---------- */
-html[data-theme="dawn"][data-appearance="dark"] { --accent: #6aa9f0; }
 html[data-theme="pixel"][data-appearance="dark"] .widget { background: var(--p-surface, #101317); }
 html[data-theme="pixel"][data-appearance="dark"] .wallpaper { filter: saturate(.9) brightness(.9); }
 html[data-theme="pixel"][data-appearance="dark"] .veil {
@@ -247,3 +223,32 @@ html[data-theme="pixel"][data-appearance="dark"] .status-dot.warn { background: 
 html[data-theme="pixel"][data-appearance="dark"] .icon-btn { color: var(--p-on-primary-container, #d3e3fd); }
 html[data-theme="pixel"][data-appearance="dark"] .icon-btn:hover { color: var(--p-on-primary-container, #d3e3fd); }
 html[data-theme="pixel"][data-appearance="dark"] .widget.offline .bar { stroke: rgba(255,255,255,.22) !important; }
+
+/* ---------- 玻璃玻玻璃（Liquid Glass）悬浮窗 ----------
+   基础版已经是深色玻璃；这里让壁纸透出来一点，并把网络条 / 图标按钮做成
+   带镜面倒角的玻璃片，和主面板的液态玻璃保持同一种材质语言。 */
+html[data-theme="glass"] .widget {
+  border-color: rgba(255,255,255,.22);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.34), inset 0 0 0 1px rgba(255,255,255,.05);
+}
+html[data-theme="glass"] .wallpaper { filter: blur(7px) saturate(1.25) brightness(.92); transform: scale(1.08); }
+html[data-theme="glass"] .veil {
+  background:
+    radial-gradient(120% 90% at 12% 0%, rgba(90,170,255,.24), transparent 58%),
+    radial-gradient(90% 90% at 100% 100%, rgba(160,110,255,.20), transparent 58%),
+    linear-gradient(158deg, rgba(6,12,24,.50) 0%, rgba(6,12,22,.62) 52%, rgba(5,10,18,.74) 100%);
+}
+html[data-theme="glass"] .w-net {
+  background: linear-gradient(150deg, rgba(255,255,255,.085), rgba(255,255,255,.028));
+  border-color: rgba(255,255,255,.14);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 8px 18px rgba(0,0,0,.22);
+}
+html[data-theme="glass"] .icon-btn {
+  background: linear-gradient(150deg, rgba(255,255,255,.14), rgba(255,255,255,.04));
+  border-color: rgba(255,255,255,.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28);
+}
+html[data-theme="glass"] .ring .track { stroke: rgba(255,255,255,.13); }
+html[data-theme="glass"] .w-foot { background: linear-gradient(180deg, transparent, rgba(4,8,16,.55)); }
+html[data-theme="glass"] .status-dot { box-shadow: 0 0 8px #63f5b3; }
+

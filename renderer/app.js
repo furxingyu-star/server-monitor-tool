@@ -11,24 +11,20 @@ const state = {
   snap: null,
   settings: null,
   wallpaper: { path: '', url: '', thumb: '' },
-  style: 10,
-  selectedWallpaper: null,
-  accent: '#78d7ff',
-  theme: 'deep',
-  liquid: true,
-  liquidMemory: true,
-  lowFx: false,
-  appearance: 'system', // light | dark | system（只影响浅色主题的明暗皮肤）
+  sysWallpaper: { path: '', url: '', thumb: '' },
+  glassWallpaper: null,
+  accent: '#1a73e8',
+  theme: 'pixel',
+  appearance: 'system', // light | dark | system（决定像素皮肤的明暗）
+  language: 'zh', // zh | cat（中文猫猫语）
   showIp: true,
   showDomain: true,
-  glass: 'std',
   appName: '星语哨兵',
   appSubtitle: 'StarWhisper Sentinel',
   startup: 'both',
   showWidget: true,
   widgetAutostart: true,
   widgetSize: 'normal',
-  minimizeToTray: true,
   closeAction: 'tray',
   closeNotify: true,
   closeTip: 'tray',
@@ -40,11 +36,16 @@ const state = {
   fit: null,
   termReady: false,
   termMode: 'idle',
-  demoShell: { buffer: '', active: false, cwd: '~' },
-  lastWallpaperList: []
+  demoShell: { buffer: '', active: false, cwd: '~' }
 };
 
 const MODE_LABEL = { demo: '演示', bt: '宝塔 API', ssh: 'SSH' };
+
+/* 上次选择的主题先写回 <html>，避免首屏闪一下另一套皮肤（bootstrap 返回后会再校准）。 */
+try {
+  const bootTheme = localStorage.getItem('sws.theme');
+  if (bootTheme === 'pixel' || bootTheme === 'glass') document.documentElement.setAttribute('data-theme', bootTheme);
+} catch (e) { /* ignore */ }
 
 /* ---------- 身份展示（IP / 域名） ---------- */
 function hostFromUrl(url) {
@@ -137,7 +138,7 @@ function toast(msg, kind = '') {
 }
 
 /* ---------- accent / backdrop ---------- */
-const LIGHT_THEMES = ['dawn', 'pixel'];
+const LIGHT_THEMES = ['pixel'];
 function isLightTheme() {
   return LIGHT_THEMES.indexOf(document.documentElement.getAttribute('data-theme')) >= 0;
 }
@@ -181,39 +182,26 @@ function applyAccent(color) {
   repaintChartsIfNeeded();
 }
 
-const THEMES = ['deep', 'violet', 'ocean', 'ember', 'graphite', 'pixel', 'dawn'];
+/* 两套主题：pixel（Material You，可明可暗）与 glass（玻璃玻玻璃，深色液态玻璃）。
+   任何不认识的旧配置都会回落到 pixel。 */
+const THEMES = ['pixel', 'glass'];
+const THEME_LABELS = { pixel: '像素 · Material You', glass: '玻璃玻玻璃' };
 
-/* 每套主题的默认强调色：切主题时只有「当前色还是某个主题的默认色」（= 用户没自己挑过）
-   才顺带换调色板，自定义颜色永远保留。 */
-const THEME_ACCENTS = {
-  deep: '#78d7ff', violet: '#b18cff', ocean: '#4fe3c1', ember: '#ffb86b',
-  graphite: '#cfdaea', pixel: '#1a73e8', dawn: '#2f8fe0'
-};
-
-const THEME_LABELS = {
-  deep: '深空 · 液态玻璃', violet: '紫霭 · 液态玻璃', ocean: '深海 · 液态玻璃',
-  ember: '熔金 · 液态玻璃', graphite: '石墨 · 液态玻璃', pixel: '像素 · Material You', dawn: '晨雾 · 浅色'
-};
-
-function applyTheme(id, syncPalette) {
-  const next = THEMES.indexOf(id) >= 0 ? id : 'deep';
-  const prev = state.theme;
+function applyTheme(id) {
+  const next = THEMES.indexOf(id) >= 0 ? id : (THEMES.indexOf(state.theme) >= 0 ? state.theme : 'pixel');
   state.theme = next;
-  const stock = Object.keys(THEME_ACCENTS).map((k) => THEME_ACCENTS[k]);
-  if (syncPalette && next !== prev && THEME_ACCENTS[next] &&
-      (!state.accent || stock.indexOf(state.accent) >= 0)) {
-    state.accent = THEME_ACCENTS[next];
-    els('#accentRow button').forEach((b) => b.classList.toggle('active', b.dataset.accent === state.accent));
-  }
-  if (next !== 'pixel') pixelAccentSeed = false;
-  document.documentElement.setAttribute('data-theme', state.theme);
+  if (!state.accent) state.accent = '#1a73e8';
+  document.documentElement.setAttribute('data-theme', next);
   document.documentElement.style.setProperty('--accent', paintTint(state.accent));
-  els('#themeGrid .theme-card').forEach((b) => b.classList.toggle('active', b.dataset.theme === state.theme));
+  els('#themeGrid .theme-card').forEach((b) => b.classList.toggle('active', b.dataset.theme === next));
   const ft = $('footTheme');
-  if (ft) ft.textContent = THEME_LABELS[state.theme] || '液态玻璃';
+  if (ft) ft.textContent = THEME_LABELS[next];
+  try { localStorage.setItem('sws.theme', next); } catch (e) { /* ignore */ }
+  if (next === 'glass' && window.LiquidGlass) window.LiquidGlass.mount();
+  applyThemeBackdrop();
   applyPixelPalette();
   repaintChartsIfNeeded();
-  syncFxControls();
+  applyAppearance(state.appearance);
 }
 
 
@@ -344,56 +332,128 @@ function repaintChartsIfNeeded() {
   } catch (e) {}
 }
 
-function applyFx(ui) {
-  ui = ui || {};
-  state.lowFx = !!ui.lowFx;
-  // 流畅模式会关掉重模糊，和液态玻璃折射互斥，开一个就关另一个
-  state.liquid = ui.liquid !== false && !state.lowFx;
-  if (state.liquid) state.liquidMemory = true;
-  document.documentElement.setAttribute('data-liquid', state.liquid ? '1' : '0');
-  document.documentElement.setAttribute('data-fx', state.lowFx ? 'low' : '');
-  syncFxControls();
-}
-
 /* ---------- 外观模式：跟随系统 / 浅色 / 深色 ----------
-   只决定浅色主题用哪套皮肤：像素主题有 Material You 的亮/暗两套，
-   晨雾的浅色覆盖层只在亮色下生效。深色主题本身已经是深色，不受影响。 */
+   只决定像素皮肤用 Material You 的亮/暗哪一套。 */
 const SYSTEM_DARK = window.matchMedia('(prefers-color-scheme: dark)');
 function resolvedDark() {
   return state.appearance === 'dark' || (state.appearance === 'system' && SYSTEM_DARK.matches);
 }
+const APPEARANCE_HINT = '按 Windows 深色设置自动切换；浅色/深色决定像素皮肤的明暗。';
+const GLASS_HINT = '玻璃玻玻璃 使用深色液态玻璃，固定深色；切回像素主题可选浅色 / 深色。';
+
 function applyAppearance(mode) {
   state.appearance = ['light', 'dark', 'system'].indexOf(mode) >= 0 ? mode : 'system';
-  const dark = resolvedDark();
+  const glass = state.theme === 'glass';
+  const dark = glass || resolvedDark();
   document.documentElement.setAttribute('data-appearance', dark ? 'dark' : 'light');
-  els('#appearanceSeg button').forEach((b) => b.classList.toggle('active', b.dataset.appearance === state.appearance));
+  els('#appearanceSeg button').forEach((b) => b.classList.toggle('active', !glass && b.dataset.appearance === state.appearance));
   applyPixelPalette();
   repaintChartsIfNeeded();
+  updateSegIndicators();
+  syncAppearanceLock();
+}
+
+/* 玻璃玻玻璃 只有深色一套，切到该主题时把外观模式锁住，切回像素主题再恢复用户的选择。 */
+function syncAppearanceLock() {
+  const glass = state.theme === 'glass';
+  const seg = $('appearanceSeg');
+  if (seg) {
+    seg.classList.toggle('is-locked', glass);
+    Array.prototype.forEach.call(seg.querySelectorAll('button'), (b) => { b.disabled = glass; });
+  }
+  const hint = $('appearanceHint');
+  if (hint) hint.textContent = glass ? GLASS_HINT : APPEARANCE_HINT;
 }
 SYSTEM_DARK.addEventListener('change', () => { if (state.appearance === 'system') applyAppearance('system'); });
 
-/* 玻璃质感 / 液态玻璃 / 流畅模式三者共用一个可用状态：
-   流畅模式开着时玻璃不可选；像素主题是实色表面，玻璃也不生效。 */
-function syncFxControls() {
-  const lg = $('liquidGlass');
-  const lf = $('lowFx');
-  const row = $('glassRow');
-  const pixel = state.theme === 'pixel';
-  const glassOff = state.lowFx || pixel;
-  if (lg) { lg.checked = state.liquid; lg.disabled = glassOff; }
-  if (lf) lf.checked = state.lowFx;
-  if (row) {
-    row.classList.toggle('is-disabled', glassOff);
-    els('#glassRow button').forEach((b) => { b.disabled = glassOff; });
+/* ---------- 语言：简体中文 / 中文猫猫语 ----------
+   猫猫语只改界面文案（renderer/cat-speak.js），不动数据与终端输出。 */
+const LANGUAGES = ['zh', 'cat'];
+const LANG_LABELS = { zh: '简体中文', cat: '中文猫猫语 🐱' };
+function applyLanguage(lang) {
+  state.language = LANGUAGES.indexOf(lang) >= 0 ? lang : 'zh';
+  document.documentElement.setAttribute('data-lang', state.language);
+  if (window.CatSpeak) window.CatSpeak.setEnabled(state.language === 'cat');
+  els('#langSeg button').forEach((b) => b.classList.toggle('active', b.dataset.lang === state.language));
+  const hint = $('langHint');
+  if (hint) hint.textContent = LANG_LABELS[state.language];
+  if ($('langSeg')) updateSegIndicators($('langSeg'));
+}
+
+/* 语言行默认折叠，只显示当前语言；点标题展开选项。 */
+function setLangOpen(open) {
+  const row = $('langRow');
+  const body = $('langBody');
+  const toggle = $('langToggle');
+  if (!row || !body) return;
+  body.hidden = !open;
+  row.classList.toggle('open', !!open);
+  if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) requestAnimationFrame(() => { if ($('langSeg')) updateSegIndicators($('langSeg')); });
+}
+
+/* ---------- 平滑选项切换：移动高亮指示器 ----------
+   参照 zhoulinhua0-star/smooth-option-switcher 的交互：选项互斥，高亮块在选中项之间平滑移动，
+   缓动 cubic-bezier(.34,.96,.6,.99)，动效只走 CSS；位置/尺寸按实际按钮量取，换主题/换字号也不会错位。 */
+function segIndicatorFor(row) {
+  let ind = row.querySelector(':scope > .seg-ind');
+  if (!ind) {
+    ind = document.createElement('span');
+    ind.className = 'seg-ind';
+    ind.setAttribute('aria-hidden', 'true');
+    row.insertBefore(ind, row.firstChild);
   }
-  const hint = $('fxHint');
-  if (hint) {
-    hint.textContent = pixel
-      ? '像素主题使用实色材料，玻璃质感与折射不生效'
-      : state.lowFx
-        ? '流畅模式已开启：玻璃折射与质感档已关闭，关闭后自动恢复'
-        : '';
+  return ind;
+}
+
+function updateSegIndicators(scope) {
+  let rows;
+  if (!scope) {
+    rows = Array.prototype.slice.call(document.querySelectorAll('.seg, .seg-row'));
+  } else {
+    rows = Array.prototype.slice.call(scope.querySelectorAll('.seg, .seg-row'));
+    if (scope.matches && scope.matches('.seg, .seg-row')) rows.unshift(scope);
   }
+  rows.forEach((row) => {
+    const ind = segIndicatorFor(row);
+    const btn = row.querySelector('button.active');
+    if (!btn || !btn.offsetWidth) { ind.style.opacity = '0'; return; }
+    ind.style.width = btn.offsetWidth + 'px';
+    ind.style.height = btn.offsetHeight + 'px';
+    ind.style.transform = 'translate(' + btn.offsetLeft + 'px,' + btn.offsetTop + 'px)';
+    ind.style.opacity = '1';
+    // 首次定位不要从 (0,0) 滑进来：先摆好位置，下一帧再开启动画
+    if (!row.classList.contains('is-ready')) requestAnimationFrame(() => row.classList.add('is-ready'));
+  });
+}
+
+function initSegIndicators() {
+  updateSegIndicators();
+  // 点击后（各控件自己改完 active）再量一次，覆盖所有 seg / seg-row
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('.seg button, .seg-row button');
+    if (!b) return;
+    const row = b.parentElement;
+    requestAnimationFrame(() => updateSegIndicators(row));
+  });
+  window.addEventListener('resize', () => updateSegIndicators());
+  // 键盘可达：左右方向键 / Home / End 在选项间移动并选中
+  Array.prototype.forEach.call(document.querySelectorAll('.seg, .seg-row'), (row) => {
+    row.addEventListener('keydown', (e) => {
+      if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].indexOf(e.key) < 0) return;
+      const btns = Array.prototype.slice.call(row.querySelectorAll('button:not(:disabled)'));
+      if (!btns.length) return;
+      const cur = btns.indexOf(document.activeElement);
+      let next = cur;
+      if (e.key === 'ArrowLeft') next = cur <= 0 ? btns.length - 1 : cur - 1;
+      else if (e.key === 'ArrowRight') next = cur < 0 || cur === btns.length - 1 ? 0 : cur + 1;
+      else if (e.key === 'Home') next = 0;
+      else next = btns.length - 1;
+      e.preventDefault();
+      btns[next].focus();
+      btns[next].click();
+    });
+  });
 }
 
 function applyDisplay(ui) {
@@ -480,13 +540,6 @@ function beginHeroRename() {
   input.addEventListener('blur', () => finish(true));
 }
 
-const GLASS_LEVELS = ['clear', 'std', 'rich'];
-function applyGlass(level) {
-  state.glass = GLASS_LEVELS.indexOf(level) >= 0 ? level : 'std';
-  document.documentElement.setAttribute('data-glass', state.glass);
-  els('#glassRow button').forEach((b) => b.classList.toggle('active', b.dataset.glass === state.glass));
-}
-
 let lookTimer = 0;
 function persistLook() {
   clearTimeout(lookTimer);
@@ -494,13 +547,39 @@ function persistLook() {
     try {
       await window.sentinel.saveSettings({
         ui: {
-          theme: state.theme, accent: state.accent, liquid: state.liquid, lowFx: state.lowFx,
-          appearance: state.appearance,
-          showIp: state.showIp, showDomain: state.showDomain, glass: state.glass
+          theme: state.theme, accent: state.accent, appearance: state.appearance,
+          language: state.language,
+          showIp: state.showIp, showDomain: state.showDomain
         }
       });
     } catch (e) { /* ignore */ }
   }, 260);
+}
+
+/* 玻璃主题可以用一张单独选的壁纸（折射需要细节），像素主题继续跟随桌面壁纸。 */
+function applyThemeBackdrop() {
+  const custom = state.theme === 'glass' && state.glassWallpaper && state.glassWallpaper.url;
+  const url = custom || state.sysWallpaper.url;
+  if (url) applyBackdrop(url);
+  syncGlassWp();
+}
+
+function syncGlassWp() {
+  const row = $('glassWp');
+  if (!row) return;
+  row.hidden = state.theme !== 'glass';
+  const pick = state.glassWallpaper && state.glassWallpaper.thumb;
+  const thumb = $('glassWpThumb');
+  if (thumb) thumb.style.backgroundImage = pick ? 'url("' + pick.replace(/"/g, '\\"') + '")' : '';
+  if (thumb) thumb.classList.toggle('empty', !pick);
+  const name = $('glassWpName');
+  if (name) {
+    name.textContent = pick
+      ? '已使用自选壁纸 · 建议选细节多的图片，折射更明显'
+      : '跟随桌面壁纸 · 选一张有细节的图片，玻璃折射会更明显';
+  }
+  const reset = $('glassWpReset');
+  if (reset) reset.disabled = !pick;
 }
 
 function applyBackdrop(url) {
@@ -614,39 +693,29 @@ function initPointerGlow() {
   });
 }
 
-/* 指针高光：液态玻璃表面的镜面反光跟随鼠标 */
-function initSpecular() {
-  let raf = 0, lastEl = null, mx = 0, my = 0;
-  document.addEventListener('pointermove', (e) => {
-    const t = e.target && e.target.closest ? e.target.closest('.quick, .mode-card, .theme-card') : null;
-    if (!t) return;
-    mx = e.clientX; my = e.clientY;
-    lastEl = t;
-    if (raf) return;
-    raf = requestAnimationFrame(() => {
-      raf = 0;
-      if (!lastEl) return;
-      const r = lastEl.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      const px = Math.max(0, Math.min(100, ((mx - r.left) / r.width) * 100));
-      const py = Math.max(0, Math.min(100, ((my - r.top) / r.height) * 100));
-      lastEl.style.setProperty('--mx', px.toFixed(1) + '%');
-      lastEl.style.setProperty('--my', py.toFixed(1) + '%');
-    });
-  }, { passive: true });
-}
-
 /* ---------- navigation ---------- */
 let navHandler = null;
+function syncNavPill() {
+  const nav = document.getElementById('navRail');
+  const pill = nav && nav.querySelector('.nav-pill');
+  if (!nav || !pill) return;
+  const active = nav.querySelector('.nav-item.active');
+  if (!active) return;
+  const nr = nav.getBoundingClientRect();
+  const ar = active.getBoundingClientRect();
+  pill.style.height = ar.height + 'px';
+  pill.style.transform = 'translateY(' + (ar.top - nr.top) + 'px)';
+  pill.classList.add('ready');
+}
+
 function switchView(name) {
   els('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.view === name));
   els('.view').forEach((v) => v.classList.toggle('active', v.id === 'view-' + name));
   const content = $('content');
   if (content) content.scrollTop = 0;
   // 图表在页面隐藏时画不出来，切过来之后补画一次（否则会显示上一次的拉伸位图）
-  requestAnimationFrame(() => repaintChartsIfNeeded());
+  requestAnimationFrame(() => { repaintChartsIfNeeded(); updateSegIndicators(); syncNavPill(); });
   if (name === 'terminal') { ensureTerm(); setTimeout(() => { fitTerm(); }, 60); }
-  if (name === 'wallpaper') refreshWallpaperView();
   if (navHandler) navHandler(name);
 }
 
@@ -1238,205 +1307,6 @@ function disconnectTerminal() {
   }
 }
 
-/* ---------- wallpaper ---------- */
-const PRESETS = [
-  { id: 'aurora', name: '极光之夜', desc: '深空青紫', seed: 7, base: ['#05101f', '#0a1c3a', '#071426'], blobs: [['#2f7bff', .30, .18, .55], ['#6d4bff', .78, .82, .55], ['#2fe0b0', .62, .22, .45], ['#58b6ff', .18, .72, .42]] },
-  { id: 'deep', name: '深海微光', desc: '静谧蓝绿', seed: 21, base: ['#03121a', '#062a33', '#04141f'], blobs: [['#00a9c8', .24, .30, .55], ['#0ee0b0', .72, .68, .50], ['#1a5f9e', .55, .16, .45], ['#7ef7e0', .86, .24, .30]] },
-  { id: 'violet', name: '紫霭流云', desc: '柔雾紫粉', seed: 33, base: ['#120a20', '#2a1440', '#160b26'], blobs: [['#8f4dff', .30, .26, .58], ['#ff6fae', .76, .72, .45], ['#5a5bff', .60, .86, .42], ['#c78bff', .12, .74, .35]] },
-  { id: 'lime', name: '青柠晨雾', desc: '森系青绿', seed: 48, base: ['#061410', '#0a2a1e', '#051712'], blobs: [['#22c55e', .26, .70, .45], ['#7ef7c0', .70, .24, .48], ['#0e7a5e', .58, .58, .42], ['#d9ff8a', .88, .66, .25]] },
-  { id: 'sunset', name: '熔金落日', desc: '暖橙暮色', seed: 61, base: ['#1a0912', '#3a1220', '#1c0a10'], blobs: [['#ff8a3d', .28, .68, .52], ['#ff4d6d', .72, .34, .45], ['#ffc46b', .52, .16, .35], ['#9b2cff', .88, .78, .28]] },
-  { id: 'graphite', name: '极简石墨', desc: '低饱和灰蓝', seed: 76, base: ['#0b0e13', '#161c26', '#0a0d12'], blobs: [['#4f6a8a', .32, .30, .45], ['#7f93ad', .74, .70, .40], ['#2a3342', .55, .85, .50], ['#c9d8ea', .86, .20, .18]] }
-];
-
-function paintPreset(ctx, w, h, def) {
-  const rnd = mulberry32(def.seed);
-  const g = ctx.createLinearGradient(0, 0, w, h);
-  g.addColorStop(0, def.base[0]);
-  g.addColorStop(0.55, def.base[1]);
-  g.addColorStop(1, def.base[2]);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, w, h);
-
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  for (const [color, cx, cy, r] of def.blobs) {
-    const x = cx * w + (rnd() - 0.5) * w * 0.08;
-    const y = cy * h + (rnd() - 0.5) * h * 0.08;
-    const rad = Math.max(w, h) * (r * 0.9 + 0.18) * (0.9 + rnd() * 0.2);
-    const rg = ctx.createRadialGradient(x, y, 0, x, y, rad);
-    rg.addColorStop(0, hexA(color, 0.55));
-    rg.addColorStop(0.45, hexA(color, 0.22));
-    rg.addColorStop(1, hexA(color, 0));
-    ctx.fillStyle = rg;
-    ctx.beginPath();
-    ctx.arc(x, y, rad, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-
-  // flowing ribbon
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  ctx.translate(w * 0.5, h * 0.55);
-  ctx.rotate(-0.32 + (def.seed % 10) * 0.02);
-  const ribbon = ctx.createLinearGradient(-w * 0.6, 0, w * 0.6, 0);
-  ribbon.addColorStop(0, hexA(def.blobs[0][0], 0));
-  ribbon.addColorStop(0.35, hexA(def.blobs[0][0], 0.16));
-  ribbon.addColorStop(0.65, hexA(def.blobs[1][0], 0.14));
-  ribbon.addColorStop(1, hexA(def.blobs[1][0], 0));
-  ctx.fillStyle = ribbon;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, w * 0.62, h * 0.075, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  // vignette
-  const vg = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.2, w / 2, h / 2, Math.max(w, h) * 0.75);
-  vg.addColorStop(0, 'rgba(0,0,0,0)');
-  vg.addColorStop(1, 'rgba(0,0,0,.5)');
-  ctx.fillStyle = vg;
-  ctx.fillRect(0, 0, w, h);
-
-  // fine grain
-  const nw = 160, nh = Math.max(90, Math.round(160 * h / w));
-  const nc = document.createElement('canvas');
-  nc.width = nw; nc.height = nh;
-  const nctx = nc.getContext('2d');
-  const id = nctx.createImageData(nw, nh);
-  for (let i = 0; i < id.data.length; i += 4) {
-    const v = 110 + Math.floor(rnd() * 90);
-    id.data[i] = v; id.data[i + 1] = v; id.data[i + 2] = v; id.data[i + 3] = 26;
-  }
-  nctx.putImageData(id, 0, 0);
-  ctx.save();
-  ctx.globalCompositeOperation = 'overlay';
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(nc, 0, 0, w, h);
-  ctx.restore();
-}
-
-function mulberry32(a) {
-  return function () {
-    a |= 0; a = a + 0x6D2B79F5 | 0;
-    let t = Math.imul(a ^ a >>> 15, 1 | a);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
-function renderPresets() {
-  const grid = $('presetGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  for (const p of PRESETS) {
-    const card = document.createElement('div');
-    card.className = 'preset';
-    card.dataset.preset = p.id;
-    const c = document.createElement('canvas');
-    c.width = 640; c.height = 336;
-    paintPreset(c.getContext('2d'), 640, 336, p);
-    card.appendChild(c);
-    const meta = document.createElement('div');
-    meta.className = 'p-meta';
-    meta.innerHTML = '<span>' + esc(p.name) + '</span><small>' + esc(p.desc) + '</small>';
-    card.appendChild(meta);
-    card.addEventListener('click', () => {
-      els('#presetGrid .preset').forEach((x) => x.classList.remove('selected'));
-      card.classList.add('selected');
-      const url = c.toDataURL('image/png');
-      state.selectedWallpaper = { preset: p.id, name: p.name, previewUrl: url };
-      $('wpPreview').style.backgroundImage = 'url("' + url + '")';
-      $('wpName').textContent = p.name + '（内置）';
-      $('wpDims').textContent = '2560 × 1440 · 生成';
-      $('wpStatus').textContent = '已选择「' + p.name + '」，点击上方应用';
-    });
-    grid.appendChild(card);
-  }
-}
-
-function renderGallery() {
-  const box = $('gallery');
-  if (!box) return;
-  const list = state.lastWallpaperList || [];
-  $('galleryCount').textContent = list.length + ' 张可用图片';
-  if (!list.length) {
-    box.innerHTML = '<div class="empty" style="grid-column:span 4">没有找到可用图片</div>';
-    return;
-  }
-  box.innerHTML = '';
-  list.forEach((it) => {
-    const item = document.createElement('div');
-    item.className = 'gal-item';
-    item.dataset.path = it.path;
-    const img = document.createElement('img');
-    img.src = it.url;
-    img.loading = 'lazy';
-    img.alt = it.name || '';
-    item.appendChild(img);
-    const cap = document.createElement('span');
-    cap.textContent = it.name || it.path.split(/[\\/]/).pop();
-    item.appendChild(cap);
-    item.addEventListener('click', () => {
-      els('#gallery .gal-item').forEach((x) => x.classList.remove('selected'));
-      item.classList.add('selected');
-      els('#presetGrid .preset').forEach((x) => x.classList.remove('selected'));
-      state.selectedWallpaper = { path: it.path, url: it.url };
-      $('wpPreview').style.backgroundImage = 'url("' + it.url + '")';
-      $('wpName').textContent = it.name || '';
-      $('wpDims').textContent = it.width && it.height ? it.width + ' × ' + it.height : '本机图片';
-      $('wpStatus').textContent = '已选择本机图片，点击上方应用';
-    });
-    box.appendChild(item);
-  });
-}
-
-async function refreshWallpaperView() {
-  try {
-    const wp = await window.sentinel.wallpaper.get();
-    if (wp) {
-      state.wallpaper = wp;
-      $('wpPreview').style.backgroundImage = 'url("' + (wp.thumb || wp.url) + '")';
-      $('wpName').textContent = (wp.path || '').split(/[\\/]/).pop() || '当前壁纸';
-      $('wpDims').textContent = '当前桌面壁纸';
-    }
-    const list = await window.sentinel.wallpaper.list();
-    state.lastWallpaperList = Array.isArray(list) ? list : [];
-    renderGallery();
-  } catch (e) { console.error(e); }
-}
-
-async function applySelectedWallpaper() {
-  const sel = state.selectedWallpaper;
-  if (!sel) { toast('请先选择一张壁纸'); return; }
-  const style = state.style;
-  $('wpStatus').textContent = '正在应用…';
-  try {
-    let res;
-    if (sel.preset) {
-      const def = PRESETS.find((p) => p.id === sel.preset);
-      const c = document.createElement('canvas');
-      c.width = 2560; c.height = 1440;
-      paintPreset(c.getContext('2d'), 2560, 1440, def);
-      const dataUrl = c.toDataURL('image/jpeg', 0.92);
-      res = await window.sentinel.wallpaper.apply({ dataUrl, name: 'sentinel-' + def.id, source: 'preset', style });
-    } else {
-      res = await window.sentinel.wallpaper.apply({ path: sel.path, source: 'custom', style });
-    }
-    if (res && res.url) {
-      state.wallpaper = res;
-      applyBackdrop(res.url);
-      $('wpPreview').style.backgroundImage = 'url("' + (res.thumb || res.url) + '")';
-      $('wpName').textContent = (res.path || '').split(/[\\/]/).pop() || '壁纸';
-      $('wpDims').textContent = '已应用到桌面';
-      $('wpStatus').textContent = '✓ 已同步到界面与桌面';
-      toast('壁纸已更换');
-    }
-  } catch (e) {
-    $('wpStatus').textContent = '应用失败：' + (e.message || e);
-    toast('壁纸应用失败', 'err');
-  }
-}
-
 /* ---------- settings ---------- */
 function syncAppControls() {
   const setSeg = (id, attr, value) => {
@@ -1453,11 +1323,11 @@ function syncAppControls() {
     r.checked = r.value === (state.closeAction === 'quit' ? 'quit' : 'tray');
   });
   if ($('showWidget')) $('showWidget').checked = state.showWidget;
-  if ($('minimizeToTray')) $('minimizeToTray').checked = state.minimizeToTray;
   if ($('closeNotify')) $('closeNotify').checked = state.closeNotify;
   if ($('closeTip')) $('closeTip').value = state.closeTip;
   if ($('closeTipText')) $('closeTipText').value = state.closeTipText;
   if ($('closeTipSilent')) $('closeTipSilent').checked = state.closeTipSilent;
+  updateSegIndicators();
 }
 
 function collectAppPatch() {
@@ -1468,7 +1338,6 @@ function collectAppPatch() {
     showWidget: state.showWidget,
     widgetAutostart: state.widgetAutostart,
     widgetSize: state.widgetSize,
-    minimizeToTray: state.minimizeToTray,
     closeAction: state.closeAction,
     closeNotify: state.closeNotify,
     closeTip: state.closeTip,
@@ -1503,11 +1372,10 @@ function fillSettings(s) {
   $('displayName').value = s.displayName === 'my-server' ? '' : (s.displayName || '');
   $('pollSeconds').value = s.pollSeconds || 3;
   $('alwaysOnTop').checked = !s.ui || s.ui.alwaysOnTop !== false;
-  applyAccent((s.ui && s.ui.accent) || '#78d7ff');
+  applyAccent((s.ui && s.ui.accent) || '#1a73e8');
   applyTheme(s.ui && s.ui.theme);
   applyAppearance((s.ui && s.ui.appearance) || 'system');
-  applyFx(s.ui || {});
-  applyGlass(s.ui && s.ui.glass);
+  applyLanguage((s.ui && s.ui.language) || 'zh');
   applyDisplay(s.ui || {});
   const ui = s.ui || {};
   applyAppName(ui.appName, ui.appSubtitle);
@@ -1515,15 +1383,12 @@ function fillSettings(s) {
   state.showWidget = ui.showWidget !== false;
   state.widgetAutostart = ui.widgetAutostart !== false;
   state.widgetSize = ui.widgetSize === 'mini' ? 'mini' : 'normal';
-  state.minimizeToTray = ui.minimizeToTray !== false;
   state.closeAction = ['tray', 'quit', 'ask'].indexOf(ui.closeAction) >= 0 ? ui.closeAction : 'tray';
   state.closeNotify = ui.closeNotify !== false;
   state.closeTip = ['tray', 'widget', 'quit', 'custom'].indexOf(ui.closeTip) >= 0 ? ui.closeTip : 'tray';
   state.closeTipText = ui.closeTipText || '';
   state.closeTipSilent = ui.closeTipSilent === true;
   syncAppControls();
-  state.style = (s.wallpaper && s.wallpaper.style) || 10;
-  els('#wpStyleChips button').forEach((b) => b.classList.toggle('active', Number(b.dataset.style) === Number(state.style)));
   const btReady = !!(s.bt && (s.bt.hasApiKey || s.bt.hasKey));
   $('btBadge').textContent = btReady ? '已配置' : '未配置';
   $('btBadge').className = 'cfg-badge' + (btReady ? ' ok' : '');
@@ -1555,9 +1420,7 @@ function collectSettings() {
       accent: state.accent,
       theme: state.theme,
       appearance: state.appearance,
-      liquid: state.liquid,
-      lowFx: state.lowFx,
-      glass: state.glass,
+      language: state.language,
       showIp: $('showIp') ? $('showIp').checked : state.showIp,
       showDomain: $('showDomain') ? $('showDomain').checked : state.showDomain,
       alwaysOnTop: $('alwaysOnTop').checked
@@ -1699,8 +1562,6 @@ function wireEvents() {
     window.sentinel.window.setWidgetVisible(state.showWidget);
     persistApp();
   });
-  const mt = $('minimizeToTray');
-  if (mt) mt.addEventListener('change', () => { state.minimizeToTray = mt.checked; persistApp(); });
   const cn = $('closeNotify');
   if (cn) cn.addEventListener('change', () => { state.closeNotify = cn.checked; persistApp(); });
   const ct = $('closeTip');
@@ -1720,7 +1581,6 @@ function wireEvents() {
   $('openPanelBtn').addEventListener('click', () => window.sentinel.openPanel());
   $('qPanel').addEventListener('click', () => window.sentinel.openPanel());
   $('qTerminal').addEventListener('click', () => switchView('terminal'));
-  $('qWallpaper').addEventListener('click', () => switchView('wallpaper'));
   $('qRefresh').addEventListener('click', async () => { await window.sentinel.refresh(); toast('已刷新'); });
   $('fixConnBtn').addEventListener('click', () => switchView('settings'));
 
@@ -1761,26 +1621,6 @@ function wireEvents() {
     try { await navigator.clipboard.writeText(sel); toast('已复制'); } catch { toast('复制失败', 'err'); }
   });
 
-  $('wpStyleChips').addEventListener('click', (e) => {
-    const b = e.target.closest('button');
-    if (!b) return;
-    state.style = Number(b.dataset.style);
-    els('#wpStyleChips button').forEach((x) => x.classList.toggle('active', x === b));
-  });
-  $('wpApplyBtn').addEventListener('click', applySelectedWallpaper);
-  $('wpPickBtn').addEventListener('click', async () => {
-    try {
-      const pick = await window.sentinel.wallpaper.pick();
-      if (!pick) return;
-      state.selectedWallpaper = pick;
-      $('wpPreview').style.backgroundImage = 'url("' + (pick.thumb || pick.url) + '")';
-      $('wpName').textContent = (pick.path || '').split(/[\\/]/).pop();
-      $('wpDims').textContent = '本机图片';
-      $('wpStatus').textContent = '已选择本机图片，点击上方应用';
-    } catch (e) { toast('选择图片失败', 'err'); }
-  });
-  $('wpOpenFolder').addEventListener('click', () => window.sentinel.wallpaper.openFolder());
-
   els('#modeGrid .mode-card').forEach((b) => b.addEventListener('click', () => {
     els('#modeGrid .mode-card').forEach((x) => x.classList.toggle('active', x === b));
     $('btPanel').classList.toggle('hidden', b.dataset.mode !== 'bt');
@@ -1789,45 +1629,59 @@ function wireEvents() {
   $('sshTest').addEventListener('click', testSsh);
   $('saveSettings').addEventListener('click', () => saveSettings(false));
   $('saveSettings2').addEventListener('click', () => saveSettings(false));
+  els('#themeGrid .theme-card').forEach((b) => b.addEventListener('click', () => {
+    applyTheme(b.dataset.theme);
+    persistLook();
+  }));
+  const gp = $('glassWpPick');
+  if (gp) gp.addEventListener('click', async () => {
+    try {
+      const r = await window.sentinel.wallpaper.pickGlass();
+      if (!r || r.canceled || !r.url) return;
+      state.glassWallpaper = { path: r.path, url: r.url, thumb: r.thumb };
+      applyThemeBackdrop();
+      scheduleAdaptiveTint();
+      toast('玻璃壁纸已更新');
+    } catch (e) { toast('选择壁纸失败：' + (e.message || e), 'err'); }
+  });
+  const gr = $('glassWpReset');
+  if (gr) gr.addEventListener('click', async () => {
+    try {
+      await window.sentinel.wallpaper.clearGlass();
+      state.glassWallpaper = null;
+      applyThemeBackdrop();
+      scheduleAdaptiveTint();
+      toast('已恢复跟随桌面壁纸');
+    } catch (e) { toast('操作失败：' + (e.message || e), 'err'); }
+  });
   els('#accentRow button').forEach((b) => b.addEventListener('click', () => {
-    if (state.theme === 'pixel') pixelAccentSeed = true;
+    pixelAccentSeed = true;
     applyAccent(b.dataset.accent);
     persistLook();
   }));
-  els('#themeGrid .theme-card').forEach((b) => b.addEventListener('click', () => { applyTheme(b.dataset.theme, true); persistLook(); }));
   els('#appearanceSeg button').forEach((b) => b.addEventListener('click', () => { applyAppearance(b.dataset.appearance); persistLook(); }));
+  const langToggle = $('langToggle');
+  if (langToggle) langToggle.addEventListener('click', () => setLangOpen($('langBody').hidden));
+  const langRow = $('langSeg');
+  if (langRow) langRow.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-lang]');
+    if (!b) return;
+    applyLanguage(b.dataset.lang);
+    persistLook();
+    toast(state.language === 'cat' ? '切成猫猫语啦喵~ 🐾' : '已切回简体中文');
+  });
   const custom = $('accentCustom');
   if (custom) custom.addEventListener('input', (e) => {
-    if (state.theme === 'pixel') pixelAccentSeed = true;
+    pixelAccentSeed = true;
     applyAccent(e.target.value);
     els('#accentRow button').forEach((b) => b.classList.remove('active'));
     custom.classList.add('is-active');
-    persistLook();
-  });
-  const lg = $('liquidGlass');
-  if (lg) lg.addEventListener('change', () => {
-    // 与流畅模式互斥：开玻璃就关流畅
-    applyFx(lg.checked ? { liquid: true, lowFx: false } : { liquid: false, lowFx: false });
-    persistLook();
-  });
-  const lf = $('lowFx');
-  if (lf) lf.addEventListener('change', () => {
-    applyFx(lf.checked ? { liquid: false, lowFx: true } : { liquid: state.liquidMemory, lowFx: false });
     persistLook();
   });
   const si = $('showIp');
   if (si) si.addEventListener('change', () => { applyDisplay({ showIp: si.checked, showDomain: state.showDomain }); persistLook(); });
   const sd = $('showDomain');
   if (sd) sd.addEventListener('change', () => { applyDisplay({ showIp: state.showIp, showDomain: sd.checked }); persistLook(); });
-  const gr = $('glassRow');
-  if (gr) gr.addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-glass]');
-    if (!b) return;
-    if (state.lowFx) { toast('流畅模式下不能选玻璃质感，先关掉流畅模式'); return; }
-    if (state.theme === 'pixel') { toast('像素主题是实色材料，玻璃质感不生效'); return; }
-    applyGlass(b.dataset.glass);
-    persistLook();
-  });
   $('btDocs').addEventListener('click', (e) => { e.preventDefault(); window.sentinel.openExternal('https://docs.bt.cn/api'); });
   $('quitBtn').addEventListener('click', () => window.sentinel.quit());
 
@@ -1857,10 +1711,15 @@ function startClock() {
 async function boot() {
   initPointerGlow();
   initScrollFastPath();
-  initSpecular();
   wireEvents();
   startClock();
-  renderPresets();
+  initSegIndicators();
+  const navRail = document.getElementById('navRail');
+  if (navRail) {
+    requestAnimationFrame(() => { syncNavPill(); document.body.classList.add('nav-ready'); });
+    if (window.ResizeObserver) new ResizeObserver(() => syncNavPill()).observe(navRail);
+    window.addEventListener('resize', syncNavPill);
+  }
 
   try {
     const boot = await window.sentinel.bootstrap();
@@ -1869,13 +1728,10 @@ async function boot() {
       $('aboutVersion').textContent = boot.appVersion || '1.0.0';
       $('aboutElectron').textContent = boot.electron || '—';
       if ($('aboutStorage')) $('aboutStorage').textContent = (boot.storage && boot.storage.label) || '—';
-      if (boot.wallpaper && boot.wallpaper.url) {
-        state.wallpaper = boot.wallpaper;
-        applyBackdrop(boot.wallpaper.url);
-        $('wpPreview').style.backgroundImage = 'url("' + (boot.wallpaper.thumb || boot.wallpaper.url) + '")';
-      }
-      state.lastWallpaperList = Array.isArray(boot.wallpapers) ? boot.wallpapers : [];
-      renderGallery();
+      state.sysWallpaper = (boot.wallpaper && boot.wallpaper.url) ? boot.wallpaper : { path: '', url: '', thumb: '' };
+      state.wallpaper = state.sysWallpaper;
+      state.glassWallpaper = boot.glassWallpaper || null;
+      applyThemeBackdrop();
     }
   } catch (e) { console.error('bootstrap failed', e); }
 
@@ -1896,28 +1752,28 @@ async function boot() {
     const ui = s.ui || {};
     applyTheme(ui.theme);
     applyAppearance(ui.appearance || 'system');
-    applyFx(ui);
-    applyGlass(ui.glass);
+    applyLanguage(ui.language || 'zh');
     applyDisplay(ui);
+    if (Object.prototype.hasOwnProperty.call(ui, 'glassWallpaper')) {
+      window.sentinel.wallpaper.get().then((wp) => {
+        if (!wp) return;
+        state.glassWallpaper = wp.glass || null;
+        applyThemeBackdrop();
+        scheduleAdaptiveTint();
+      }).catch(() => {});
+    }
     if (ui.appName || ui.appSubtitle !== undefined) applyAppName(ui.appName, ui.appSubtitle);
     if (ui.accent) applyAccent(ui.accent);
     state.startup = ui.startup || 'both';
     state.showWidget = ui.showWidget !== false;
     state.widgetAutostart = ui.widgetAutostart !== false;
     state.widgetSize = ui.widgetSize === 'mini' ? 'mini' : 'normal';
-    state.minimizeToTray = ui.minimizeToTray !== false;
     state.closeAction = ['tray', 'quit', 'ask'].indexOf(ui.closeAction) >= 0 ? ui.closeAction : 'tray';
     state.closeNotify = ui.closeNotify !== false;
     state.closeTip = ui.closeTip || 'tray';
     state.closeTipText = ui.closeTipText || '';
     state.closeTipSilent = ui.closeTipSilent === true;
     syncAppControls();
-  });
-  window.sentinel.onWallpaper((wp) => {
-    if (!wp) return;
-    state.wallpaper = wp;
-    applyBackdrop(wp.url);
-    if (wp.thumb) $('wpPreview').style.backgroundImage = 'url("' + wp.thumb + '")';
   });
   window.sentinel.onTerminalData((data) => { if (state.term) state.term.write(data); });
   window.sentinel.onTerminalStatus((st) => {

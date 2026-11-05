@@ -28,7 +28,9 @@ const SHOT_WALL = argValue('wall');
 const SHOT_RENAME = argValue('rename');
 const SHOT_APPEARANCE = argValue('appearance');
 const SHOT_APPNAME = argValue('appname');
+const SHOT_WSIZE = argValue('wsize');
 const SHOT_APPSUB = argValue('appsub');
+const SHOT_LANG = argValue('lang');
 const isShot = !!SHOT;
 
 let store, engine, tray = null, widgetWin = null, dashWin = null, isQuitting = false;
@@ -170,8 +172,11 @@ class DataEngine {
   }
 }
 
-function applyWallpaperToStore(filePath, source = 'custom') {
-  lastWallpaper = { path: filePath, url: fileUrl(filePath) };
+// 玻璃主题可以单独指定一张壁纸（液态玻璃需要可折射的内容），留空则跟随桌面壁纸
+function glassWallpaperPayload() {
+  const p = String(uiPrefs().glassWallpaper || '');
+  if (!p || !fs.existsSync(p)) return null;
+  return { path: p, url: fileUrl(p), thumb: wallpaper.thumbDataUrl(p, 1440) };
 }
 
 async function bootstrapPayload() {
@@ -179,15 +184,17 @@ async function bootstrapPayload() {
   let wpPath = store.load().wallpaper.path;
   if (!wpPath || !fs.existsSync(wpPath)) wpPath = await wallpaper.getCurrentWallpaper();
   lastWallpaper = { path: wpPath, url: fileUrl(wpPath) };
-  const items = wallpaper.listWallpapers().map((it) => ({ ...it, url: fileUrl(it.path) }));
   return {
     settings: s,
     appVersion: app.getVersion(),
     electron: process.versions.electron,
     storage: store.protection(),
     platform: process.platform,
-    wallpaper: { path: wpPath, url: lastWallpaper.url, thumb: wallpaper.thumbDataUrl(wpPath, 1440) },
-    wallpapers: items,
+    wallpaper: {
+      path: wpPath, url: lastWallpaper.url, thumb: wallpaper.thumbDataUrl(wpPath, 1440),
+      glass: glassWallpaperPayload()
+    },
+    glassWallpaper: glassWallpaperPayload(),
     dataModes: [
       { id: 'demo', name: '演示模式', desc: '无需配置，立即预览全部界面' },
       { id: 'bt', name: '宝塔 API', desc: '官方 API，读取 CPU / 内存 / 磁盘 / Docker' },
@@ -220,6 +227,22 @@ function trayTip() {
   const sub = appSubtitle();
   return sub ? appTitle() + ' · ' + sub : appTitle();
 }
+
+/* 中文猫猫语：托盘/对话框等系统侧文案跟随设置里的语言（页面文案由 renderer/cat-speak.js 负责） */
+const CAT_TRAY = {
+  '打开主面板': '打开猫舍面板喵~ 🐾',
+  '显示悬浮窗': '露出小窗喵~',
+  '隐藏悬浮窗': '藏起小窗喵~',
+  '悬浮窗尺寸': '小窗大小喵~',
+  '标准': '标准喵~',
+  '迷你': '迷你喵~',
+  '立即刷新': '立刻巡逻喵~',
+  '设置…': '设置喵~ ⚙️',
+  '退出': '溜了溜了喵~'
+};
+function catMode() { return uiPrefs().language === 'cat'; }
+function trayLabel(text) { return catMode() ? (CAT_TRAY[text] || text) : text; }
+function trayQuitLabel() { return catMode() ? CAT_TRAY['退出'] : '退出' + appTitle(); }
 
 function hostOf(url) {
   try { return new URL(String(url || '')).hostname || ''; } catch { return ''; }
@@ -394,21 +417,20 @@ function refreshTrayMenu() {
   const visible = !!(widgetWin && !widgetWin.isDestroyed() && widgetWin.isVisible());
   tray.setToolTip(trayTip());
   const menu = Menu.buildFromTemplate([
-    { label: '打开主面板', click: () => showDashboard() },
-    { label: (visible ? '隐藏悬浮窗' : '显示悬浮窗'), click: () => toggleWidget() },
+    { label: trayLabel('打开主面板'), click: () => showDashboard() },
+    { label: trayLabel(visible ? '隐藏悬浮窗' : '显示悬浮窗'), click: () => toggleWidget() },
     {
-      label: '悬浮窗尺寸',
+      label: trayLabel('悬浮窗尺寸'),
       submenu: [
-        { label: '标准', type: 'radio', checked: size === 'normal', click: () => setWidgetSize('normal') },
-        { label: '迷你', type: 'radio', checked: size === 'mini', click: () => setWidgetSize('mini') }
+        { label: trayLabel('标准'), type: 'radio', checked: size === 'normal', click: () => setWidgetSize('normal') },
+        { label: trayLabel('迷你'), type: 'radio', checked: size === 'mini', click: () => setWidgetSize('mini') }
       ]
     },
     { type: 'separator' },
-    { label: '立即刷新', click: () => engine.refresh() },
-    { label: '壁纸…', click: () => { showDashboard(); if (dashWin) dashWin.webContents.send('navigate', 'wallpaper'); } },
-    { label: '设置…', click: () => { showDashboard(); if (dashWin) dashWin.webContents.send('navigate', 'settings'); } },
+    { label: trayLabel('立即刷新'), click: () => engine.refresh() },
+    { label: trayLabel('设置…'), click: () => { showDashboard(); if (dashWin) dashWin.webContents.send('navigate', 'settings'); } },
     { type: 'separator' },
-    { label: '退出' + appTitle(), click: () => quitApp() }
+    { label: trayQuitLabel(), click: () => quitApp() }
   ]);
   tray.setContextMenu(menu);
 }
@@ -522,7 +544,6 @@ function registerIpc() {
   ipcMain.handle('window:close-dashboard', () => { handleDashboardClose(); return true; });
   ipcMain.handle('window:minimize', () => {
     if (!dashWin) return false;
-    if (uiPrefs().minimizeToTray !== false) { dashWin.hide(); return true; }
     dashWin.minimize();
     return true;
   });
@@ -555,30 +576,24 @@ function registerIpc() {
     let p = store.load().wallpaper.path;
     if (!p || !fs.existsSync(p)) p = await wallpaper.getCurrentWallpaper();
     lastWallpaper = { path: p, url: fileUrl(p) };
-    return { path: p, url: lastWallpaper.url, thumb: wallpaper.thumbDataUrl(p, 1440) };
+    return { path: p, url: lastWallpaper.url, thumb: wallpaper.thumbDataUrl(p, 1440), glass: glassWallpaperPayload() };
   });
-  ipcMain.handle('wallpaper:list', () => wallpaper.listWallpapers().map((it) => ({ ...it, url: fileUrl(it.path) })));
-  ipcMain.handle('wallpaper:pick', async () => {
-    const r = await dialog.showOpenDialog(dashWin || undefined, {
-      title: '选择壁纸', properties: ['openFile'],
-      filters: [{ name: '图片', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp'] }]
+  ipcMain.handle('wallpaper:pick-glass', async () => {
+    const res = await dialog.showOpenDialog(dashWin, {
+      title: catMode() ? '挑一张猫舍壁纸喵~ 🐱' : '选择玻璃主题壁纸',
+      properties: ['openFile'],
+      filters: [{ name: '图片', extensions: ['jpg', 'jpeg', 'png', 'webp', 'bmp', 'avif'] }]
     });
-    if (r.canceled || !r.filePaths[0]) return null;
-    return { path: r.filePaths[0], url: fileUrl(r.filePaths[0]), thumb: wallpaper.thumbDataUrl(r.filePaths[0], 1440) };
+    if (res.canceled || !res.filePaths || !res.filePaths[0]) return { canceled: true };
+    const file = res.filePaths[0];
+    if (!fs.existsSync(file)) return { canceled: true, error: '文件不存在' };
+    store.save({ ui: { glassWallpaper: file } });
+    return Object.assign({ canceled: false }, glassWallpaperPayload());
   });
-  ipcMain.handle('wallpaper:apply', async (_e, payload) => {
-    let filePath = payload.path;
-    if (payload.dataUrl) filePath = wallpaper.saveDataUrl(payload.dataUrl, payload.name || 'generated');
-    if (!filePath || !fs.existsSync(filePath)) throw new Error('壁纸文件不存在');
-    store.save({ wallpaper: { path: filePath, source: payload.source || 'custom', style: payload.style ?? store.load().wallpaper.style } });
-    if (payload.setDesktop !== false) await wallpaper.setWallpaper(filePath, payload.style ?? store.load().wallpaper.style);
-    lastWallpaper = { path: filePath, url: fileUrl(filePath) };
-    const thumb = wallpaper.thumbDataUrl(filePath, 1440);
-    for (const w of [widgetWin, dashWin]) if (w && !w.isDestroyed()) w.webContents.send('wallpaper:changed', { path: filePath, url: lastWallpaper.url, thumb });
-    return { path: filePath, url: lastWallpaper.url, thumb };
+  ipcMain.handle('wallpaper:clear-glass', () => {
+    store.save({ ui: { glassWallpaper: '' } });
+    return { canceled: false, cleared: true };
   });
-  ipcMain.handle('wallpaper:open-folder', () => shell.openPath(wallpaper.wallpaperDir()));
-
   ipcMain.handle('terminal:connect', async (_e, opts = {}) => {
     const mode = store.load().mode;
     if (mode === 'demo') { terminal.mode = 'demo'; terminal.message = '演示终端'; return { ok: true, mode: 'demo' }; }
@@ -663,7 +678,11 @@ async function captureShot() {
           return { hero: q('.hero-card'), metric: q('.metric-card'), grid: q('.overview-grid'),
             defs: document.querySelectorAll('.lg-defs').length, bodyKids: document.body.children.length,
             after: cs ? { bf: cs.backdropFilter, filter: cs.filter, z: cs.zIndex, pos: cs.position } : null,
-            htmlAttrs: document.documentElement.getAttribute('data-liquid') + '/' + document.documentElement.getAttribute('data-lg') };
+            htmlAttrs: document.documentElement.getAttribute('data-liquid') + '/' + document.documentElement.getAttribute('data-lg'),
+            theme: document.documentElement.getAttribute('data-theme'),
+            bgImage: (() => { const b = document.getElementById('bg'); const v = b ? getComputedStyle(b).backgroundImage : ''; return v && v !== 'none' ? v.slice(0, 80) : v; })(),
+            glassBf: (() => { const g = document.querySelector('.glass'); return g ? getComputedStyle(g).backdropFilter : null; })(),
+            glassCount: document.querySelectorAll('.glass').length };
         })()`);
         console.log('PROBE ' + JSON.stringify(info));
       } catch (e) { console.log('PROBE_ERR ' + e.message); }
@@ -679,7 +698,7 @@ async function captureShot() {
 app.whenReady().then(async () => {
   store = new Store();
   // 截图预览用：--theme=pixel --accent=#1a73e8 只在内存里覆盖外观，不写回用户设置。
-  if (isShot && (SHOT_THEME || SHOT_ACCENT || SHOT_WALL || SHOT_APPEARANCE || SHOT_APPNAME || SHOT_APPSUB !== undefined)) {
+  if (isShot && (SHOT_THEME || SHOT_ACCENT || SHOT_WALL || SHOT_APPEARANCE || SHOT_APPNAME || SHOT_APPSUB !== undefined || SHOT_WSIZE || SHOT_LANG)) {
     const baseLoad = store.load.bind(store);
     store.load = () => {
       const s = baseLoad();
@@ -690,6 +709,8 @@ app.whenReady().then(async () => {
       if (SHOT_APPEARANCE) s.ui.appearance = SHOT_APPEARANCE;
       if (SHOT_APPNAME !== undefined) s.ui.appName = SHOT_APPNAME;
       if (SHOT_APPSUB !== undefined) s.ui.appSubtitle = SHOT_APPSUB;
+      if (SHOT_WSIZE) s.ui.widgetSize = SHOT_WSIZE;
+      if (SHOT_LANG) s.ui.language = SHOT_LANG;
       return s;
     };
   }
