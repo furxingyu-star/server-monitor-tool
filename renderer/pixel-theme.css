@@ -868,3 +868,111 @@ html[data-theme="pixel"][data-appearance="dark"] .switch-line input[type=checkbo
 html[data-theme="pixel"][data-appearance="dark"] .switch-line input[type=checkbox]:checked {
   background-image: radial-gradient(circle 11px, #fff 98%, transparent 100%);
 }
+
+/* ============================================================
+   v1.4.0 视觉打磨（对照群友评审逐条修）
+   ============================================================ */
+
+/* 1. 顶栏时间：加「系统时间」标签、抬高对比度与字号 */
+html[data-theme="pixel"] .tb-center { display: flex; align-items: baseline; gap: 10px; }
+html[data-theme="pixel"] .tb-clock-label {
+  font-size: 9.5px; font-weight: 500; letter-spacing: .14em; color: var(--p-on-surface-muted);
+}
+html[data-theme="pixel"] .tb-clock {
+  font-size: 13px; font-weight: 500; letter-spacing: .02em; color: var(--p-on-surface);
+}
+
+/* 2. 侧栏状态卡：BT 药丸改纯文字；立即刷新降级为文字按钮，与顶栏深色主按钮分层 */
+html[data-theme="pixel"] .ss-mode {
+  padding: 0; border-radius: 0; background: none;
+  font-size: 9.5px; font-weight: 500; letter-spacing: .12em; color: var(--p-on-surface-muted);
+}
+html[data-theme="pixel"] .ss-refresh {
+  height: 30px; margin-top: 10px; border-radius: 10px; border: 0;
+  background: transparent; color: var(--p-on-surface-variant);
+  font-size: 12px; font-weight: 500;
+}
+html[data-theme="pixel"] .ss-refresh:hover { background: rgba(0,0,0,.05); color: var(--p-on-surface); }
+
+/* 3. 导航选中态：回到主色系，弱化紫调 */
+html[data-theme="pixel"] .nav-item.active {
+  background: color-mix(in srgb, var(--p-primary) 12%, var(--p-surface-1));
+  color: var(--p-primary);
+}
+html[data-theme="pixel"] .nav-item.active svg { color: var(--p-primary); }
+
+/* 4. 内边距统一：主机卡 / 指标卡 / 网络卡同一边距 */
+html[data-theme="pixel"] .hero-card,
+html[data-lg="1"][data-liquid="1"][data-theme="pixel"] .hero-card,
+html[data-lg="1"][data-liquid="1"][data-glass="clear"][data-theme="pixel"] .hero-card,
+html[data-lg="1"][data-liquid="1"][data-glass="rich"][data-theme="pixel"] .hero-card { padding: 22px; }
+html[data-theme="pixel"] .metric-card { padding: 22px; }
+html[data-theme="pixel"] .net-card { padding: 22px 22px 18px; }
+
+/* 5. 数值与单位基线对齐 */
+html[data-theme="pixel"] .mc-value { align-items: baseline; gap: 3px; }
+html[data-theme="pixel"] .mc-value span { align-self: baseline; font-size: 15px; line-height: 1; margin-left: 0; color: var(--p-on-surface-muted); }
+
+/* 6. 指标卡底部两列：不折行、右列右对齐、等宽数字 */
+html[data-theme="pixel"] .mc-foot {
+  display: grid; grid-template-columns: auto auto; justify-content: space-between;
+  gap: 8px; align-items: baseline;
+  white-space: nowrap; font-size: 11px; font-variant-numeric: tabular-nums;
+}
+html[data-theme="pixel"] .mc-foot span { white-space: nowrap; }
+html[data-theme="pixel"] .mc-foot span:last-child { text-align: right; color: var(--p-on-surface-muted); }
+
+/* 7. 状态文字着色：在线绿 / 持平灰 / 上升橙 / 下降绿 */
+html[data-theme="pixel"] .live-pill { color: #0f7b43; }
+html[data-theme="pixel"] .live-pill.off { color: #ba1a1a; }
+html[data-theme="pixel"] .mc-head em.mc-trend.flat { color: var(--p-on-surface-muted); }
+html[data-theme="pixel"] .mc-head em.mc-trend.up { color: #e37400; }
+html[data-theme="pixel"] .mc-head em.mc-trend.down { color: #0f9d43; }
+
+/* 8. 图例：实心圆=实时，虚线=平均，三角=峰值 */
+html[data-theme="pixel"] .lg { width: 10px; height: 10px; border-radius: 50%; }
+html[data-theme="pixel"] .lg-cpu { background: var(--p-primary); }
+html[data-theme="pixel"] .lg-avg { width: 12px; height: 0; border-radius: 0; background: none; border-top: 2px dashed #b6bac2; }
+html[data-theme="pixel"] .lg-max {
+  width: 0; height: 0; border-radius: 0; background: none;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-bottom: 9px solid #f9ab00;
+}
+
+/* 9. 网络瓦片：箭头与数值基线排版 */
+html[data-theme="pixel"] .np { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: center; }
+html[data-theme="pixel"] .np-arrow {
+  width: auto; height: auto; border-radius: 0; background: none; box-shadow: none;
+  font-size: 15px; font-weight: 500; line-height: 1;
+}
+html[data-theme="pixel"] .np.up .np-arrow { background: none; color: #0f9d58; }
+html[data-theme="pixel"] .np.down .np-arrow { background: none; color: var(--p-primary); }
+html[data-theme="pixel"] .np-body { min-width: 0; }
+html[data-theme="pixel"] .np-line { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+html[data-theme="pixel"] .np-line i {
+  font-style: normal; font-size: 11px; letter-spacing: .04em; color: var(--p-on-surface-muted);
+}
+html[data-theme="pixel"] .np-line b {
+  font-size: 15px; font-weight: 500; color: var(--p-on-surface);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+html[data-theme="pixel"] .np small {
+  display: block; margin-top: 2px; font-size: 10px;
+  color: var(--p-on-surface-muted); font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 深色外观下的打磨覆盖 ---------- */
+html[data-theme="pixel"][data-appearance="dark"] .tb-clock { color: var(--p-on-surface); }
+html[data-theme="pixel"][data-appearance="dark"] .nav-item.active {
+  background: color-mix(in srgb, var(--p-primary) 20%, var(--p-surface-1)); color: #d3e3fd;
+}
+html[data-theme="pixel"][data-appearance="dark"] .nav-item.active svg { color: #d3e3fd; }
+html[data-theme="pixel"][data-appearance="dark"] .ss-refresh:hover { background: rgba(255,255,255,.07); }
+html[data-theme="pixel"][data-appearance="dark"] .live-pill { color: #81c995; }
+html[data-theme="pixel"][data-appearance="dark"] .live-pill.off { color: #f28b82; }
+html[data-theme="pixel"][data-appearance="dark"] .mc-head em.mc-trend.up { color: #fdd663; }
+html[data-theme="pixel"][data-appearance="dark"] .mc-head em.mc-trend.down { color: #81c995; }
+html[data-theme="pixel"][data-appearance="dark"] .lg-cpu { background: var(--p-primary); }
+html[data-theme="pixel"][data-appearance="dark"] .lg-avg { background: none; border-top: 2px dashed rgba(255,255,255,.42); }
+html[data-theme="pixel"][data-appearance="dark"] .lg-max { background: none; border-bottom-color: #fdd663; }
+

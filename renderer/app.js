@@ -74,6 +74,13 @@ function fmtSize(bytes, digits = 1) {
 function fmtRate(bytes) {
   return fmtSize(bytes, 1) + '/s';
 }
+/* 同一单位的两个容量并成「13.9 / 38.6 GB」，避免卡片底部折行出现两个单位 */
+function fmtPair(a, b) {
+  const sa = fmtSize(a), sb = fmtSize(b);
+  const ma = /^([\d.]+) (.*)$/.exec(sa), mb = /^([\d.]+) (.*)$/.exec(sb);
+  if (ma && mb && ma[2] && ma[2] === mb[2]) return ma[1] + ' / ' + sb;
+  return sa + ' / ' + sb;
+}
 function fmtGB(mb) {
   const v = num(mb) / 1024;
   return v >= 100 ? v.toFixed(0) + ' GB' : v.toFixed(1) + ' GB';
@@ -101,6 +108,14 @@ function relTime(ts) {
   if (d < 60) return d + ' 秒前';
   return Math.round(d / 60) + ' 分钟前';
 }
+function setTrend(id, history, key) {
+  const el = $(id);
+  if (!el) return;
+  const t = trendOf(history, key);
+  el.textContent = t;
+  el.className = 'mc-trend' + (t === '持平' ? ' flat' : t.charAt(0) === '↑' ? ' up' : t.charAt(0) === '↓' ? ' down' : '');
+}
+
 function trendOf(history, key) {
   if (!history || history.length < 2) return '—';
   const a = num(history[history.length - 2][key]);
@@ -717,17 +732,17 @@ function render(snap) {
   $('cpuBar').style.width = v.cpu + '%';
   $('cpuSub').textContent = v.cores + ' 核' + (v.cpuModel ? ' · ' + v.cpuModel.slice(0, 22) : '');
   $('cpuLoad').textContent = '负载 ' + num(v.load[0]).toFixed(2);
-  $('cpuTrend').textContent = trendOf(v.hist, 'cpu');
+  setTrend('cpuTrend', v.hist, 'cpu');
 
   $('memValue').textContent = v.mem.toFixed(0);
   $('memBar').style.width = v.mem + '%';
-  $('memSub').textContent = fmtSize(v.memUsedBytes) + ' / ' + fmtSize(v.memTotalBytes);
+  $('memSub').textContent = fmtPair(v.memUsedBytes, v.memTotalBytes);
   $('memFree').textContent = '可用 ' + fmtSize(Math.max(0, v.memTotalBytes - v.memUsedBytes));
-  $('memTrend').textContent = trendOf(v.hist, 'mem');
+  setTrend('memTrend', v.hist, 'mem');
 
   $('diskValue').textContent = v.disk.toFixed(0);
   $('diskBar').style.width = v.disk + '%';
-  $('diskSub').textContent = fmtSize(v.diskUsed) + ' / ' + fmtSize(v.diskTotal);
+  $('diskSub').textContent = fmtPair(v.diskUsed, v.diskTotal);
   $('diskFree').textContent = '剩余 ' + fmtSize(v.diskFree);
   $('diskTrend').textContent = v.parts.length ? v.parts.length + ' 个分区' : '—';
 
@@ -825,24 +840,41 @@ function drawLineChart(canvas, values, color, opts = {}) {
   const { ctx, w, h } = prep;
   ctx.clearRect(0, 0, w, h);
   if (values.length < 1) values = [0];
-  const padX = 2, padTop = 8, padBottom = 4;
+  const axis = opts.axis || null;                       // null | 'percent' | 'auto'
+  const padLeft = axis ? 34 : 2;
+  const padRight = 2, padTop = 8, padBottom = 6;
   const peak = Math.max(...values, 1);
   const softMin = opts.softMin || 0;
   const maxVal = Math.max(opts.max || 0, peak * 1.25, softMin) * 1.06;
   const minVal = 0;
+  const yOf = (val) => padTop + (1 - (val - minVal) / (maxVal - minVal)) * (h - padTop - padBottom);
   const pts = values.map((val, i) => {
-    const x = padX + (i / Math.max(1, values.length - 1)) * (w - padX * 2);
-    const y = padTop + (1 - (val - minVal) / (maxVal - minVal)) * (h - padTop - padBottom);
-    return [x, y];
+    const x = padLeft + (i / Math.max(1, values.length - 1)) * (w - padLeft - padRight);
+    return [x, yOf(val)];
   });
 
-  // grid
+  // grid + y-axis ticks
   ctx.save();
-  ctx.strokeStyle = opts.gridColor || (isLightTheme() ? 'rgba(20,50,90,.10)' : 'rgba(255,255,255,.05)');
+  ctx.strokeStyle = opts.gridColor || (isLightTheme() ? 'rgba(20,50,90,.10)' : 'rgba(255,255,255,.06)');
   ctx.lineWidth = 1;
-  for (let i = 1; i <= 3; i++) {
-    const y = padTop + (i / 4) * (h - padTop - padBottom);
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  if (axis) {
+    const ticks = axis === 'percent'
+      ? [{ v: 0, label: '0' }, { v: 50, label: '50' }, { v: 100, label: '100' }]
+      : [{ v: 0, label: '0' }, { v: maxVal / 2, label: String(Math.round(maxVal / 2)) }, { v: maxVal, label: String(Math.round(maxVal)) }];
+    ctx.fillStyle = isLightTheme() ? 'rgba(60,64,67,.55)' : 'rgba(206,216,238,.66)';
+    ctx.font = '10px "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (const t of ticks) {
+      const y = clamp(yOf(t.v), padTop, h - padBottom);
+      ctx.beginPath(); ctx.moveTo(padLeft - 4, y); ctx.lineTo(w, y); ctx.stroke();
+      ctx.fillText(t.label, padLeft - 10, clamp(y, padTop + 4, h - padBottom - 4));
+    }
+  } else {
+    for (let i = 1; i <= 3; i++) {
+      const y = padTop + (i / 4) * (h - padTop - padBottom);
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
   }
   ctx.restore();
 
@@ -899,7 +931,7 @@ function renderMainChart(v) {
   const metric = state.chartMetric;
   const vals = padSeries(histSeries(v, metric));
   const color = paintTint(metric === 'mem' ? '#c0aaff' : metric === 'net' ? '#5ef0c0' : accentForChart());
-  drawLineChart($('mainChart'), vals, color, { max: metric === 'net' ? 0 : 100, softMin: metric === 'net' ? 8 : 28 });
+  drawLineChart($('mainChart'), vals, color, { max: metric === 'net' ? 0 : 100, softMin: metric === 'net' ? 8 : 28, axis: metric === 'net' ? 'auto' : 'percent' });
 
   const cur = currentMetric(v, metric);
   const suffix = metric === 'net' ? ' KB/s' : '%';
@@ -918,7 +950,7 @@ function renderPerformance(v) {
   const metric = state.perfMetric;
   const vals = padSeries(histSeries(v, metric));
   const color = paintTint(metric === 'mem' ? '#c0aaff' : metric === 'net' ? '#5ef0c0' : accentForChart());
-  drawLineChart($('perfChart'), vals, color, { max: metric === 'net' ? 0 : 100, softMin: metric === 'net' ? 8 : 28 });
+  drawLineChart($('perfChart'), vals, color, { max: metric === 'net' ? 0 : 100, softMin: metric === 'net' ? 8 : 28, axis: metric === 'net' ? 'auto' : 'percent' });
 
   $('pLoad1').textContent = num(v.load[0]).toFixed(2);
   $('pLoad5').textContent = num(v.load[1]).toFixed(2);

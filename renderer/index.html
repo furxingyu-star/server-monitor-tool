@@ -27,6 +27,7 @@
       </div>
     </div>
     <div class="tb-center">
+      <span class="tb-clock-label">系统时间</span>
       <div class="tb-clock" id="tbClock">--:--:--</div>
     </div>
     <div class="tb-actions">
@@ -179,8 +180,8 @@
         <article class="glass net-card">
           <div class="card-head"><div><h2>网络与 IO</h2><p>实时吞吐</p></div><span class="live-tag">实时</span></div>
           <div class="net-pair">
-            <div class="np up"><span class="np-arrow">↑</span><div><i>上传</i><b id="netUp">0 B/s</b><small id="netUpTotal">累计 —</small></div></div>
-            <div class="np down"><span class="np-arrow">↓</span><div><i>下载</i><b id="netDown">0 B/s</b><small id="netDownTotal">累计 —</small></div></div>
+            <div class="np up"><span class="np-arrow">↑</span><div class="np-body"><div class="np-line"><i>上传</i><b id="netUp">0 B/s</b></div><small id="netUpTotal">累计 —</small></div></div>
+            <div class="np down"><span class="np-arrow">↓</span><div class="np-body"><div class="np-line"><i>下载</i><b id="netDown">0 B/s</b></div><small id="netDownTotal">累计 —</small></div></div>
           </div>
           <div class="mini-grid">
             <div class="mini"><i>负载 1m</i><b id="load1">0.00</b></div>
