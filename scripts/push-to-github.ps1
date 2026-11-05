@@ -3,10 +3,18 @@
   ---------------------------------------------------------------
   Use this once this machine can reach github.com.
 
-    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\push-to-github.ps1 -RepoUrl https://github.com/OWNER/star-sentinel.git
+    powershell -NoProfile -ExecutionPolicy Bypass -File scripts\push-to-github.ps1
 
-  On a fresh machine, log in once through the browser (OAuth; the token
-  is stored by Git Credential Manager in Windows Credential Manager):
+  Default remote is git@github.com:furxingyu-star/star-sentinel.git and the
+  default key is %USERPROFILE%\.ssh\star_sentinel2 (already registered on the
+  GitHub account). Generate your own with:
+
+    ssh-keygen -t ed25519 -f $env:USERPROFILE\.ssh\star_sentinel2 -N ""
+
+  then paste the .pub content at https://github.com/settings/ssh/new
+
+  HTTPS alternative: pass -RepoUrl https://github.com/OWNER/repo.git and log
+  in once through the browser (Git Credential Manager):
 
     "C:\Users\Administrator\tools\git\cmd\git.exe" credential-manager github login
 
@@ -16,8 +24,9 @@
 #>
 [CmdletBinding()]
 param(
-  [Parameter(Mandatory = $true)][string]$RepoUrl,
-  [string]$Branch = "main"
+  [string]$RepoUrl = "git@github.com:furxingyu-star/star-sentinel.git",
+  [string]$Branch = "main",
+  [string]$SshKey = "$env:USERPROFILE\.ssh\star_sentinel2"
 )
 
 $ErrorActionPreference = "Stop"
@@ -40,6 +49,16 @@ if (-not $Git) { throw "git.exe not found. Set $env:SENTINEL_GIT to a git.exe pa
 
 if (-not (Test-Path (Join-Path $Root ".git"))) {
   throw "No local repository yet. Run scripts\make-bundle.ps1 first."
+}
+
+if ($RepoUrl -like "git@*" -or $RepoUrl -like "ssh://*") {
+  if ($SshKey -and (Test-Path $SshKey)) {
+    $keyPosix = $SshKey -replace "\\", "/"
+    $env:GIT_SSH_COMMAND = (('ssh -i "{0}" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new') -f $keyPosix)
+    Write-Host ("[push] ssh key " + $SshKey)
+  } else {
+    Write-Host ("[push] WARNING: ssh key not found at " + $SshKey + "; relying on ssh agent / default keys") -ForegroundColor Yellow
+  }
 }
 
 $existing = & $Git remote 2>$null

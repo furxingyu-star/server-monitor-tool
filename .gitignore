@@ -1,3 +1,7 @@
+# ---- stray shell-expansion paths ----
+%SystemDrive%/
+%USERPROFILE%/
+
 # ---- dependencies ----
 node_modules/
 .pnpm-store/
