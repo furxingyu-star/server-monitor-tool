@@ -115,18 +115,20 @@ scripts/    make-icon.py、pack.mjs、make-bundle.ps1（离线发版）、push-t
 docs/screenshots/ 界面截图
 ```
 
-## 离线发布（本机无法直连 GitHub 时）
+## 发布与更新
+
+在线仓库：<https://github.com/furxingyu-star/star-sentinel>
 
 ```powershell
+# 推到 GitHub（默认 SSH，密钥 %USERPROFILE%\.ssh\star_sentinel2）
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\push-to-github.ps1
+
+# 可选：顺便生成完全离线的发布包
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\make-bundle.ps1
 ```
 
-产出 `_publish\star-sentinel.bundle`（完整 git 历史，可 clone）与 `_publish\star-sentinel-src.zip`（源码，遵守 .gitignore）。
-联网后手动建空仓库，再：
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\push-to-github.ps1 -RepoUrl https://github.com/<你>/star-sentinel.git
-```
+- `push-to-github.ps1` 默认远端 `git@github.com:furxingyu-star/star-sentinel.git`；换仓库传 `-RepoUrl`，换密钥传 `-SshKey`。
+- `make-bundle.ps1` 产出 `_publish\star-sentinel.bundle`（完整 git 历史，可 clone）与 `_publish\star-sentinel-src.zip`（源码，遵守 .gitignore），适合完全离线的机器。
 
 ## 已知限制
 
