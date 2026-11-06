@@ -788,7 +788,7 @@ app.whenReady().then(async () => {
       const s = baseLoad();
       s.ui = Object.assign({}, s.ui);
       if (SHOT_THEME) s.ui.theme = SHOT_THEME;
-      if (SHOT_ACCENT) s.ui.accent = SHOT_ACCENT;
+      if (SHOT_ACCENT) { s.ui.accent = SHOT_ACCENT; s.ui.accentCustom = true; }
       if (SHOT_WALL) s.wallpaper = Object.assign({}, s.wallpaper, { path: SHOT_WALL });
       if (SHOT_APPEARANCE) s.ui.appearance = SHOT_APPEARANCE;
       if (SHOT_APPNAME !== undefined) s.ui.appName = SHOT_APPNAME;

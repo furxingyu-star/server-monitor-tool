@@ -19,6 +19,7 @@ const DEFAULTS = {
   wallpaper: { path: '', source: 'current', style: 10, tint: 0.62, blur: 18, dim: 0.35 },
   ui: {
     accent: '#1a73e8',
+    accentCustom: false, // 用户手动挑过强调色：像素主题优先用它，不再从壁纸取色
     theme: 'pixel',
     appearance: 'system',
     language: 'zh',

@@ -211,7 +211,19 @@ function applyTheme(id) {
    同一组种子只算一次，避免每次刷新都重新采样。 */
 const pixelPalette = { key: '' };
 let pixelPrimary = '';      // 当前 M3 主色（图表 / canvas 用）
-let pixelAccentSeed = false; // 用户在像素主题里手动挑过颜色 */
+let pixelAccentSeed = false; // 用户在像素主题里手动挑过颜色（持久化在 ui.accentCustom）
+/* 旧配置没有 accentCustom 字段时：存的不是默认蓝，就认为用户手动挑过颜色。
+   否则像素主题会一直用壁纸取色，重启后颜色变回壁纸色（v1.7.4 修复）。 */
+function savedAccentCustom(ui) {
+  if (!ui) return false;
+  if (ui.accentCustom === true) return true;
+  if (ui.accentCustom === false) return false;
+  return !!ui.accent && String(ui.accent).toLowerCase() !== '#1a73e8';
+}
+function syncAccentCustom(ui) {
+  pixelAccentSeed = savedAccentCustom(ui);
+  applyPixelPalette();
+}
 
 
 function rgbToHsl255(r, g, b) {
@@ -552,6 +564,7 @@ function persistLook() {
       await window.sentinel.saveSettings({
         ui: {
           theme: state.theme, accent: state.accent, appearance: state.appearance,
+          accentCustom: pixelAccentSeed,
           language: state.language,
           showIp: state.showIp, showDomain: state.showDomain
         }
@@ -603,7 +616,8 @@ function loadWallSample(url) {
   if (!url || wallSample.src === url) return;
   wallSample.src = url;
   wallSample.ready = false;
-  pixelAccentSeed = false; // 换了壁纸就回到「从壁纸取色」
+  // 不再在这里清掉 pixelAccentSeed：启动时也会走 loadWallSample，
+  // 清掉会让「用户挑的强调色」在每次重启后失效（壁纸取色覆盖回去）。
   const img = new Image();
   img.onload = () => {
     wallSample.img = img; wallSample.ready = true;
@@ -1408,6 +1422,8 @@ function fillSettings(s) {
   $('displayName').value = s.displayName === 'my-server' ? '' : (s.displayName || '');
   $('pollSeconds').value = s.pollSeconds || 3;
   $('alwaysOnTop').checked = !s.ui || s.ui.alwaysOnTop !== false;
+  // 先恢复「强调色是否手选」，再应用配色，否则像素主题会先按壁纸取色
+  pixelAccentSeed = savedAccentCustom(s.ui);
   applyAccent((s.ui && s.ui.accent) || '#1a73e8');
   applyTheme(s.ui && s.ui.theme);
   applyAppearance((s.ui && s.ui.appearance) || 'system');
@@ -1454,6 +1470,7 @@ function collectSettings() {
     },
     ui: Object.assign({
       accent: state.accent,
+      accentCustom: pixelAccentSeed,
       theme: state.theme,
       appearance: state.appearance,
       language: state.language,
@@ -1799,6 +1816,9 @@ async function boot() {
       }).catch(() => {});
     }
     if (ui.appName || ui.appSubtitle !== undefined) applyAppName(ui.appName, ui.appSubtitle);
+    if (Object.prototype.hasOwnProperty.call(ui, 'accentCustom') || Object.prototype.hasOwnProperty.call(ui, 'accent')) {
+      pixelAccentSeed = savedAccentCustom(ui);
+    }
     if (ui.accent) applyAccent(ui.accent);
     state.startup = ui.startup || 'both';
     state.showWidget = ui.showWidget !== false;

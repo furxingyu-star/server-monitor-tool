@@ -71,18 +71,27 @@ function hexToRgb(hex) {
 let pixelSeed = null;                       // 壁纸主色的 [h, s]
 const pixelKey = { key: '' };
 
+// 和主面板同一规则：手选的强调色优先于壁纸取色，并且跨重启保持（ui.accentCustom）。
+function customAccent(ui) {
+  if (!ui) return false;
+  if (ui.accentCustom === true) return true;
+  if (ui.accentCustom === false) return false;
+  return !!ui.accent && String(ui.accent).toLowerCase() !== '#1a73e8';
+}
+
 function applyPixelTheme() {
   if (document.documentElement.getAttribute('data-theme') !== 'pixel') { pixelKey.key = ''; return; }
   const ui = (boot && boot.settings && boot.settings.ui) || {};
   const accent = ui.accent || '#1a73e8';
   const dark = resolvedDark();
-  const key = (pixelSeed ? 'seed:' + pixelSeed[0].toFixed(3) + ':' + pixelSeed[1].toFixed(3) : 'accent:' + accent) + (dark ? '|dark' : '|light');
+  const seed = customAccent(ui) ? null : pixelSeed;
+  const key = (seed ? 'seed:' + seed[0].toFixed(3) + ':' + seed[1].toFixed(3) : 'accent:' + accent) + (dark ? '|dark' : '|light');
   if (key === pixelKey.key) return;
   pixelKey.key = key;
 
   let h, sat;
-  if (pixelSeed) {
-    h = pixelSeed[0]; sat = pixelSeed[1];
+  if (seed) {
+    h = seed[0]; sat = seed[1];
   } else {
     const hsl = hexToHsl(accent);
     h = hsl[0]; sat = Math.max(.62, Math.min(.95, hsl[1] || .78));
