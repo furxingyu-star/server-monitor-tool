@@ -48,7 +48,8 @@ const readCmd = (cmd, args) => {
 };
 
 if (!fs.existsSync(notesPath)) die(`缺少发布说明 ${path.relative(root, notesPath)}，先写好再发版`);
-const notes = fs.readFileSync(notesPath, 'utf8').trim();
+// Release 标题里已经有版本号，正文首行的 H1 会重复显示，这里去掉
+const notes = fs.readFileSync(notesPath, 'utf8').trim().replace(/^#\s+[^\n]*\n+/, '');
 log(`版本 ${version} -> tag ${tag}`);
 
 // 0. 远端仓库与 token（tag 复用判断、建 Release、上传资产都要用）
