@@ -10,9 +10,7 @@
   const KEEP = new Set([
     '星语哨兵', '像素', '玻璃玻玻璃', '像素 · Material You', 'Liquid Glass · Backdrop',
     'Pixel · Material You', 'StarWhisper Sentinel', 'STARWHISPER SENTINEL',
-    '简体中文', '中文猫猫语', '宝塔 API', 'SSH', 'CPU', 'xterm',
-    // 分段控件里的短选项：加「喵~」会把 86px 的按钮挤成两行
-    '跟随系统', '浅色', '深色'
+    '简体中文', '中文猫猫语', '宝塔 API', 'SSH', 'xterm'
   ]);
 
   // 猫猫词典（长词在前，按顺序替换）
@@ -24,7 +22,7 @@
     ['终端', '爪爪终端'],
     ['容器', '小窝'],
     ['网站', '领地'],
-    ['性能', '体力'],
+    ['性能', '跑酷速度'],
     ['数据源', '猫粮来源'],
     ['演示模式', '假猫粮模式'],
     ['立即刷新', '立刻巡逻'],
@@ -42,7 +40,12 @@
     ['手机', '发光小方块'],
     ['电脑', '大板子'],
     ['密码', '爪印密码'],
-    ['密钥', '小鱼干钥匙']
+    ['密钥', '小鱼干钥匙'],
+    ['磁盘', '大仓库'],
+    ['内存', '小口袋'],
+    ['负载', '压力'],
+    ['CPU', '脑瓜'],
+    ['LOAD', '压力']
   ];
 
   // 只有页面大标题才配 emoji，避免侧栏 / 按钮被撑开
@@ -61,17 +64,19 @@
 
   function catify(text, withEmoji) {
     const raw = String(text == null ? '' : text);
-    if (!CJK.test(raw)) return raw;
     const lead = raw.match(/^\s*/)[0];
     const tail = raw.match(/\s*$/)[0];
     const core = raw.trim();
     if (!core || KEEP.has(core) || core.indexOf('喵') >= 0) return raw;
+    // 纯英文标签（CPU / LOAD 之类）只有命中词典才翻译；IP、文件名、协议缩写原样保留
+    if (!CJK.test(core) && !DICT_MAP.has(core)) return raw;
     let out = core.replace(DICT_RE, function (m) { return DICT_MAP.get(m); });
-    out = out.replace(/。/g, '喵~ ').replace(/！/g, '喵！').replace(/？/g, '喵？');
+    out = out.replace(/。/g, '喵 ').replace(/！/g, '喵！').replace(/？/g, '喵？');
     out = out.replace(/\s+/g, ' ').trim();
-    // 只在「以汉字收尾」的句子上补「喵~」：数字、英文、括号、冒号之类收尾的不硬塞，
-    // 免得出现「2 核 · 0.00喵~」「已保存（留空保持不变）喵~」「关闭主界面时：喵~」。
-    if (!/喵[~！？]?$/.test(out) && /[\u4e00-\u9fff]$/.test(out)) out += '喵~';
+    // 统一的猫猫后缀：以汉字收尾的文案补「喵」（全部后缀都要有喵）。
+    // 以字母 / 数字收尾的不补：那些是机器型号、版本号、容量、速率这类数据（Intel Xeon Platinum 82、11.7.0、21.2 GB），
+    // 补上会长出「82喵」，反而把真实值糊掉；冒号、逗号、括号、破折号收尾的提示语同样不补。
+    if (!/喵[~！？]?$/.test(out) && /[\u4e00-\u9fff]$/.test(out)) out += '喵';
     if (withEmoji && EMOJI[core]) out += ' ' + EMOJI[core];
     return lead + out + tail;
   }
