@@ -316,7 +316,7 @@ html.is-scrolling .seg.is-ready > .seg-ind, html.is-scrolling .seg-row.is-ready 
 .pad-card { padding: 17px 18px; min-height: 178px; }
 .load-big { display: flex; gap: 18px; margin: 14px 0 12px; }
 .load-big b { display: block; font-size: 22px; font-weight: 620; font-variant-numeric: tabular-nums; }
-.load-big i { font-style: normal; font-size: 8px; color: rgba(170,196,225,.4); letter-spacing: .08em; }
+.load-big i { font-style: normal; font-size: 8px; color: rgba(170,196,225,.4); letter-spacing: .08em; white-space: nowrap; }
 .load-line { display: flex; align-items: center; gap: 9px; font-size: 8.5px; color: rgba(175,200,230,.42); }
 .lr { flex: 1; height: 4px; border-radius: 99px; background: rgba(255,255,255,.07); overflow: hidden; }
 .lr i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--good), var(--warn)); transition: width .8s; }

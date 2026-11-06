@@ -1,6 +1,6 @@
 {
   "name": "star-sentinel",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "服务器监控工具 — 宝塔 API / SSH 服务器状态悬浮窗",
   "main": "electron/main.js",
   "author": "DeepSeek Harness Agent (AI)",

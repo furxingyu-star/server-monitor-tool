@@ -10,7 +10,9 @@
   const KEEP = new Set([
     '星语哨兵', '像素', '玻璃玻玻璃', '像素 · Material You', 'Liquid Glass · Backdrop',
     'Pixel · Material You', 'StarWhisper Sentinel', 'STARWHISPER SENTINEL',
-    '简体中文', '中文猫猫语', '宝塔 API', 'SSH', 'CPU', 'xterm'
+    '简体中文', '中文猫猫语', '宝塔 API', 'SSH', 'CPU', 'xterm',
+    // 分段控件里的短选项：加「喵~」会把 86px 的按钮挤成两行
+    '跟随系统', '浅色', '深色'
   ]);
 
   // 猫猫词典（长词在前，按顺序替换）

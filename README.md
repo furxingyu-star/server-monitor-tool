@@ -32,7 +32,7 @@
 
 ## 下载
 
-免安装：到 [Releases](https://github.com/furxingyu-star/server-monitor-tool/releases) 下载 `star-sentinel-v1.7.1-win32-x64.zip`，解压后运行 `StarSentinel.exe`。
+免安装：到 [Releases](https://github.com/furxingyu-star/server-monitor-tool/releases) 下载 `star-sentinel-v1.7.2-win32-x64.zip`，解压后运行 `StarSentinel.exe`。
 首次启动是演示模式，到 **设置** 里填宝塔 API 或 SSH 就能接上你自己的服务器。
 
 ## 快速开始
