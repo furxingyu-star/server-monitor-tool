@@ -51,8 +51,27 @@ if (!fs.existsSync(notesPath)) die(`缺少发布说明 ${path.relative(root, not
 const notes = fs.readFileSync(notesPath, 'utf8').trim();
 log(`版本 ${version} -> tag ${tag}`);
 
-if (!dryRun) {
-  if (readCmd('git', ['rev-parse', '--verify', '--quiet', `refs/tags/${tag}`])) die(`tag ${tag} 已存在，先把 package.json 版本号往上加`);
+// 0. 远端仓库与 token（tag 复用判断、建 Release、上传资产都要用）
+const remote = readCmd('git', ['remote', 'get-url', 'origin']) || '';
+const m = remote.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
+if (!m) die('无法从 origin 解析 owner/repo：' + remote);
+const [, owner, repo] = m;
+const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
+const api = 'https://api.github.com';
+
+// tag 已存在时允许重跑：远端还没有对应 Release 就继续补发（跳过提交与打 tag）
+const tagExists = !!readCmd('git', ['rev-parse', '--verify', '--quiet', `refs/tags/${tag}`]);
+if (tagExists && !dryRun) {
+  if (!token) die(`tag ${tag} 已存在，且没有 GITHUB_TOKEN：无法检查/补发 Release。先把 package.json 版本号往上加`);
+  log(`tag ${tag} 已存在，检查远端 Release…`);
+  const existing = await gh(`/repos/${owner}/${repo}/releases/tags/${tag}`);
+  if (existing.status === 200) {
+    log(`Release 已存在：${existing.json.html_url}`);
+    log('如需重传资产，先在网页删掉旧资产再重跑（同名资产会被 GitHub 拒绝）');
+    process.exit(0);
+  }
+  if (existing.status !== 404) die(`查询 Release 失败 (${existing.status})：${existing.text.slice(0, 300)}`);
+  log('远端还没有该 tag 的 Release，继续补发（跳过提交与打 tag）');
 }
 
 // 1. 打包 + 压缩
@@ -72,7 +91,7 @@ if (!dryRun) {
 
 // 2. 提交 + tag
 const dirty = readCmd('git', ['status', '--porcelain']) || '';
-if (dirty) {
+if (dirty && !tagExists) {
   log('工作区有改动，发版前会先提交：');
   for (const line of dirty.split('\n').slice(0, 20)) log('  ' + line);
   run('git', ['add', '-A']);
@@ -80,23 +99,20 @@ if (dirty) {
 } else {
   log('工作区干净，跳过提交');
 }
-log(`打 tag ${tag}`);
-run('git', ['tag', '-a', tag, '-m', `星语哨兵 ${tag}`]);
+if (tagExists) {
+  log(`tag ${tag} 已存在，跳过提交与打 tag`);
+} else {
+  log(`打 tag ${tag}`);
+  run('git', ['tag', '-a', tag, '-m', `星语哨兵 ${tag}`]);
+}
 
 if (skipPush) { log('--skip-push：不推送'); process.exit(0); }
 
 // 3. 推送
 run('git', ['push', 'origin', 'HEAD']);
-run('git', ['push', 'origin', tag]);
+if (!tagExists) run('git', ['push', 'origin', tag]);
 
 // 4. GitHub Release
-const remote = readCmd('git', ['remote', 'get-url', 'origin']) || '';
-const m = remote.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
-if (!m) die('无法从 origin 解析 owner/repo：' + remote);
-const [, owner, repo] = m;
-const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
-const api = 'https://api.github.com';
-
 async function gh(pathname, init = {}) {
   const res = await fetch(api + pathname, {
     ...init,
