@@ -44,6 +44,81 @@ if (!gotLock && !isShot) {
   app.on('second-instance', () => { showDashboard(); });
 }
 
+// ── 跨副本单实例保护 ───────────────────────────────────────────────────
+// requestSingleInstanceLock 只在同一个 userData 目录内互斥：从两份安装目录启动，
+// 或者带不同 --user-data-dir 启动（旧版本残留、调试实例），就会出现两个面板。
+// 这里再加一层本机回环端口的锁：先占端口的是主实例；后来者握手确认身份后请主实例
+// 回到前台，然后自己退出。调试时可用 --allow-multi 或 SENTINEL_ALLOW_MULTI=1 跳过。
+const net = require('node:net');
+const GUARD_PORTS = [46321, 46322, 46323];
+const GUARD_TAG = 'STAR-SENTINEL/1';
+const allowMulti = argv.includes('--allow-multi') || process.env.SENTINEL_ALLOW_MULTI === '1';
+let guardServer = null;
+let appStarted = false;
+let pendingFocus = false;
+
+function requestFocus() {
+  if (appStarted) showDashboard();
+  else pendingFocus = true;
+}
+
+function guardProbe(port) {
+  return new Promise((resolve) => {
+    const sock = net.connect({ host: '127.0.0.1', port });
+    let buf = '';
+    let settled = false;
+    const done = (val) => {
+      if (settled) return;
+      settled = true;
+      try { sock.destroy(); } catch {}
+      resolve(val);
+    };
+    sock.setTimeout(260);
+    sock.on('data', (d) => {
+      buf += d.toString();
+      if (!buf.includes('\n')) return;
+      if (buf.startsWith(GUARD_TAG)) {
+        try { sock.write('focus\n'); } catch {}
+        done('owner');
+      } else done('busy');
+    });
+    sock.on('timeout', () => done('busy'));
+    sock.on('error', (e) => done(e && e.code === 'ECONNREFUSED' ? 'free' : 'busy'));
+    sock.on('close', () => done('busy'));
+  });
+}
+
+function guardListen(port) {
+  return new Promise((resolve) => {
+    const srv = net.createServer((sock) => {
+      let buf = '';
+      sock.write(GUARD_TAG + '\n');
+      sock.on('data', (d) => {
+        buf += d.toString();
+        if (buf.includes('focus')) requestFocus();
+      });
+      sock.on('error', () => {});
+    });
+    srv.once('error', () => resolve(null));
+    srv.listen({ host: '127.0.0.1', port }, () => { srv.unref(); resolve(srv); });
+  });
+}
+
+async function acquireGlobalGuard() {
+  for (const port of GUARD_PORTS) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const probe = await guardProbe(port);
+      if (probe === 'owner') return 'duplicate';
+      if (probe === 'busy') break; // 端口被别的程序占了，换下一个
+      const srv = await guardListen(port);
+      if (srv) { guardServer = srv; return 'primary'; }
+      await new Promise((r) => setTimeout(r, 80)); // 抢端口失败，再探一次
+    }
+  }
+  return 'primary'; // 三个端口都被占用：退化为只管本 userData，至少不挡启动
+}
+
+const guardRole = (!gotLock || isShot || allowMulti) ? Promise.resolve('primary') : acquireGlobalGuard();
 app.commandLine.appendSwitch('force-color-profile', 'srgb');
 if (process.platform === 'win32') app.setAppUserModelId('com.starwhisper.sentinel');
 
@@ -696,6 +771,15 @@ async function captureShot() {
 }
 
 app.whenReady().then(async () => {
+  if (!isShot) {
+    const role = await guardRole;
+    if (role === 'duplicate') {
+      // 已有实例在跑（它已收到焦点请求）：安静退出，避免出现第二个面板。
+      try { if (guardServer) guardServer.close(); } catch {}
+      app.exit(0);
+      return;
+    }
+  }
   store = new Store();
   // 截图预览用：--theme=pixel --accent=#1a73e8 只在内存里覆盖外观，不写回用户设置。
   if (isShot && (SHOT_THEME || SHOT_ACCENT || SHOT_WALL || SHOT_APPEARANCE || SHOT_APPNAME || SHOT_APPSUB !== undefined || SHOT_WSIZE || SHOT_LANG)) {
@@ -766,11 +850,17 @@ app.whenReady().then(async () => {
       }, 4000);
     }
   }
+  appStarted = true;
+  if (pendingFocus) { pendingFocus = false; showDashboard(); }
 });
 
 app.on('window-all-closed', (e) => {
   if (isShot) app.quit();
   else e.preventDefault();
 });
-app.on('before-quit', () => { isQuitting = true; try { if (engine) engine.stop(); } catch {} });
+app.on('before-quit', () => {
+  isQuitting = true;
+  try { if (engine) engine.stop(); } catch {}
+  try { if (guardServer) guardServer.close(); } catch {}
+});
 app.on('activate', () => showDashboard());
